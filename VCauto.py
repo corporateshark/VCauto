@@ -37,7 +37,8 @@ ConfigPath2010       = "ConfigVCAuto/Configuration.X"
 ConfigPathQtTarget   = "" # will be generated as: ProjectName+".pro"
 ConfigPathMAKETarget = "makefile"
 ConfigPathMAKE       = os.path.join( sys.path[0], "Targets.list" )
-CompilerName         = "g++"
+# We use gcc to avoid C/C++ file problems
+CompilerName         = "gcc"
 ArName               = "ar"
 ModuleName           = "" # must be supplied in command line or will be generated as: ProjectName+".exe"
 MainCPPName          = "" # must be supplied in command line or will be generated as: ProjectName+".cpp"
