@@ -1,9 +1,9 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.00
-# (04/06/2011)
-# (C) Kosarevsky Sergey, 2005-2011
+# Version 0.6.10
+# (17/03/2012)
+# (C) Kosarevsky Sergey, 2005-2012
 # support@linderdaum.com
 # Part of Linderdaum Engine
 # http://www.linderdaum.com
@@ -14,7 +14,9 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.00 (04/06/2011)"
+VCAutoVersion = "0.6.10 (17/03/2012)"
+
+Verbose = False
 
 GenerateVCPROJ  = False
 GenerateMAKE    = False
@@ -227,10 +229,12 @@ def ParseCommandLine():
    global GenerateQT
    global GenerateAndroid
    global GeneratingCore
+   global Verbose
    argc = len(sys.argv)
    for i in range(1, argc, 2):
       OptionName = sys.argv[i]
       OptionValue = sys.argv[i+1]
+      if OptionName == "-v" or OptionName == "--verbose": Verbose = True
       if OptionName == "-s" or OptionName == "--source-dir": SourceDir = CheckArgs( i+1, argc, "Directory name expected for option -s" )
       elif OptionName == "-o" or OptionName == "--output-file-MSVC": OutputFileName = CheckArgs( i+1, argc, "File name expected for option -o" )
       elif OptionName == "-ver" or OptionName == "--MSVC-version":
@@ -332,29 +336,33 @@ def Scan(Path):
 
 if os.getenv("LSDK_PATH") is not None: SDKPath = ReplacePathSep( os.getenv("LSDK_PATH") )
 
-ShowLogo()
+if Verbose: ShowLogo()
 
-if len(sys.argv) < 2: ShowHelp()
+if len(sys.argv) < 2:
+	if not Verbose: ShowLogo()
+	ShowHelp()
 
 ParseCommandLine()
 
-print( "Project name:", ProjectName)
+if Verbose: print( "Project name:", ProjectName)
 
 IncludeDirs.append( SourceDir )
 
 # create VC config
-print( "Reading directory tree from: ", SourceDir )
+if Verbose: print( "Reading directory tree from: ", SourceDir )
 
 Scan( SourceDir )
 
-print( "Reading make config from:", ConfigPathMAKE )
-if VisualStudio2008: print( "Reading MSVC config from:", ConfigPath2008 )
-if VisualStudio2010: print( "Reading MSVC config from:", ConfigPath2010 )
-print("")
+if Verbose: print( "Reading make config from:", ConfigPathMAKE )
+if VisualStudio2008:
+   if Verbose: print( "Reading MSVC config from:", ConfigPath2008 )
+if VisualStudio2010:
+   if Verbose: print( "Reading MSVC config from:", ConfigPath2010 )
+if Verbose: print("")
 
 if GenerateVCPROJ and VisualStudio2008:
    FileName = OutputFileName + ".vcproj"
-   print( "Generating: ", FileName )
+   if Verbose: print( "Generating: ", FileName )
    Out = open( FileName, 'wb' )
    Out.close()
    Out = open( FileName, 'a' )
@@ -382,7 +390,7 @@ if GenerateVCPROJ and VisualStudio2008:
 
 if GenerateVCPROJ and VisualStudio2010:
    FileName = OutputFileName + ".vcxproj"
-   print( "Generating: ", FileName )
+   if Verbose: print( "Generating: ", FileName )
    Out = open( FileName, 'wb' )
    Out.write( codecs.BOM_UTF8 )
    Out.close()
@@ -440,7 +448,7 @@ if GenerateVCPROJ and VisualStudio2010:
 # generate GNU output
 
 if GenerateMAKE:
-   print( "Generating: ", ConfigPathMAKETarget )
+   if Verbose: print( "Generating: ", ConfigPathMAKETarget )
    Out = open( ConfigPathMAKETarget, 'w' )
 
    # 0. "symbolic" header
@@ -493,7 +501,7 @@ if GenerateMAKE:
 
 # 7. Generate .pro Qt-project
 if GenerateQT:
-   print( "Generating: ", ConfigPathQtTarget )
+   if Verbose: print( "Generating: ", ConfigPathQtTarget )
    Out = open( ConfigPathQtTarget, 'w' )
    Out.write( "#\n" )
    Out.write( "# Qt-project created by VCauto " + VCAutoVersion + "\n" )
@@ -517,7 +525,7 @@ if GenerateQT:
 
 # 9. Generate Android project
 if GenerateAndroid:
-   print( "Generating: ", ConfigPathAndroidTarget )
+   if Verbose: print( "Generating: ", ConfigPathAndroidTarget )
 
    try:
       Out = open( ConfigPathAndroidTarget, 'w' )
@@ -543,7 +551,7 @@ if GenerateAndroid:
 
       for Name in SourceFiles:
          if Name in ExcludeFilesAndroid: 
-            print( "   Android excluded:", Name )
+            if Verbose: print( "   Android excluded:", Name )
             continue
          Out.write( MultiTab(1) + Prefix + ReplacePathSepUNIX(Name) + " \\\n" );
 
@@ -555,5 +563,5 @@ if GenerateAndroid:
 
       Out.close()
    except IOError:
-      print( "Cannot open: ", ConfigPathAndroidTarget, " --- skipping" )
+      if Verbose: print( "Cannot open: ", ConfigPathAndroidTarget, " --- skipping" )
      
