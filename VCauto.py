@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.10
-# (17/03/2012)
+# Version 0.6.11
+# (16/04/2012)
 # (C) Kosarevsky Sergey, 2005-2012
 # support@linderdaum.com
 # Part of Linderdaum Engine
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.10 (17/03/2012)"
+VCAutoVersion = "0.6.11 (16/04/2012)"
 
 Verbose = False
 
@@ -114,6 +114,11 @@ def IsSourceFile(FileName):
    if FileName.endswith(".cxx"): return True
    if FileName.endswith(".c")  : return True
    if FileName.endswith(".cc") : return True
+   return False
+
+def IsCPPFile(FileName):
+   if FileName.endswith(".cpp"): return True
+   if FileName.endswith(".cxx"): return True
    return False
 
 def MakeObjectFile(FileName):
@@ -459,6 +464,7 @@ if GenerateMAKE:
    Out.write( "CC = " + CompilerName + "\n\n" )
    Out.write( "AR = " + ArName + "\n\n" )
    Out.write( "CFLAGS = " + "\n\n" )
+   Out.write( "CPPFLAGS = " + "\n\n" )
    Out.write( "OBJDIR = " + DEFAULT_OBJ_DIR + "\n\n" )
    Out.write( "# Include directories\n" )
 
@@ -490,7 +496,11 @@ if GenerateMAKE:
          Out.write( " " + DepHeader + "\n" )
       else:
          Out.write( "\n" )
-      Out.write( MultiTab(1) + "$(CC) $(COPTS) -MD -c " + ReplacePathSepUNIX(SourceFiles[Index]) + " -o $(OBJDIR)/" + ReplacePathSepUNIX(Name) + " $(CFLAGS)\n\n" )
+      Line = MultiTab(1) + "$(CC) $(COPTS) -MD -c " + ReplacePathSepUNIX(SourceFiles[Index]) + " -o $(OBJDIR)/" + ReplacePathSepUNIX(Name) + " $(CFLAGS)";
+      if IsCPPFile( SourceFiles[Index] ):
+         Out.write( Line + " $(CPPFLAGS)\n\n" )
+      else:
+         Out.write( Line + "\n\n" )
 
    # 5. Targets > take them from Targets.list
    Out.write( "\n# User-defined targets\n\n" )
