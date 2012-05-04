@@ -468,22 +468,35 @@ if GenerateMAKE:
    Out.write( "OBJDIR = " + DEFAULT_OBJ_DIR + "\n\n" )
    Out.write( "# Include directories\n" )
 
+   ObjDir = DEFAULT_OBJ_DIR
+
    # 2. Include directories
+   IncDirList = open("include_dirs", "w")
+
    Out.write( INCLUDE_DIRS_STRING + " = " + "-I . \\\n" )
 
    for Name in IncludeDirs:
       Out.write( MultiTab(1) + "-I " + ReplacePathSepUNIX(Name) + " \\\n" );
+      IncDirList.write("-I " + ReplacePathSepUNIX(Name) + " ")
+
+   IncDirList.close()
 
    Out.write( "\nCOPTS = " )
-   Out.write( "$(" + INCLUDE_DIRS_STRING + ")" + "\n\n" )
+#   Out.write( "$(" + INCLUDE_DIRS_STRING + ")" + "\n\n" )
+   Out.write( " @include_dirs\n " )
 
    # 3. list of object files
    Out.write( "\n# Object files list\n" )
    Out.write( OBJS_STRING + " = " + " \\\n" )
 
+   ObjFileList = open("obj_files", "w")
+
    for Name in ObjectFiles:
       if Name in ExcludeFilesMake: continue
       Out.write( MultiTab(1) + "$(OBJDIR)/" + ReplacePathSepUNIX(Name) + " \\\n" );
+      ObjFileList.write(ObjDir + "/" + ReplacePathSepUNIX(Name) + " ")
+
+   ObjFileList.close()
 
    # 4. Object file compilation targets
    Out.write( "\n# Object files\n\n" )
