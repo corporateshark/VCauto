@@ -253,10 +253,15 @@ def ParseCommandLine():
       elif OptionName == "-i" or OptionName == "--include-dir": IncludeDirs.append( CheckArgs( i+1, argc, "Directory name expected for option -i" ) )
       elif OptionName == "-c" or OptionName == "--MSVC-config":
          ConfigPath2008 = CheckArgs( i+1, argc, "File name expected for option -c" )
+
          # FIXME: its a dirty hack
          if (platform.system() == "Windows"):
             ConfigPath2010 = ConfigPath2008 + "X";
          else:
+#            TmpConfigPath2008 = ConfigPath2008
+#            if(not (platform.system() == "Windows")):
+#               # remove "."
+#               TmpConfigPath2008 = TmpConfigPath2008[0:len(TmpConfigPath2008)-1]
             ConfigPath2010 = ConfigPath2008 + ".X";
 
       elif OptionName == "-m" or OptionName == "--makefile-config": ConfigPathMAKE = CheckArgs( i+1, argc, "File name expected for option -m" )
@@ -377,8 +382,8 @@ if GenerateVCPROJ and VisualStudio2008:
    Out.write( MultiTab(1) + "Version=\"9,00\"\n" )
    # copy Configuration. template
    RealConf2008 = ConfigPath2008
-#   if(platform.system() == "Windows")
-#      RealConf2008 = ConfigPath.substr()
+#   if(not (platform.system() == "Windows")):
+#      RealConf2008 = ConfigPath2008[0:len(ConfigPath2008)-1]
 
    Out.write( ReplacePatterns( open( RealConf2008 ).read() ) )
    # write files header
@@ -464,11 +469,24 @@ if GenerateMAKE:
    Out.write( "CC = " + CompilerName + "\n\n" )
    Out.write( "AR = " + ArName + "\n\n" )
    Out.write( "CFLAGS = " + "\n\n" )
+   Out.write("# 32-bit build by default\n")
+   Out.write( "ARCHFLAGS = -m32\n\n")
    Out.write( "CPPFLAGS = " + "\n\n" )
    Out.write( "OBJDIR = " + DEFAULT_OBJ_DIR + "\n\n" )
+   Out.write( "OUTDIR = " + DEFAULT_OBJ_DIR + "\n\n" )
    Out.write( "# Include directories\n" )
 
    ObjDir = DEFAULT_OBJ_DIR
+
+   # 1.1. Toolchain override
+
+   Out.write("# Try to override the toolchain description\n")
+   Out.write("ifneq ($(TOOLCHAIN_FILE), \"\")\n\n")
+
+   Out.write("# include external definitions (GCC, ObjDir, AR etc.)\n")
+   Out.write("include $(TOOLCHAIN_FILE)\n\n")
+
+   Out.write("endif\n\n")
 
    # 2. Include directories
    IncDirList = open("include_dirs", "w")
