@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.11
-# (16/04/2012)
+# Version 0.6.12
+# (01/06/2012)
 # (C) Kosarevsky Sergey, 2005-2012
 # support@linderdaum.com
 # Part of Linderdaum Engine
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.11 (16/04/2012)"
+VCAutoVersion = "0.6.12 (01/06/2012)"
 
 Verbose = False
 
@@ -256,7 +256,7 @@ def ParseCommandLine():
 
          # FIXME: its a dirty hack
          if (platform.system() == "Windows"):
-            ConfigPath2010 = ConfigPath2008 + "X";
+            ConfigPath2010 = ConfigPath2008 + ".X";
          else:
 #            TmpConfigPath2008 = ConfigPath2008
 #            if(not (platform.system() == "Windows")):
