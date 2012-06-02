@@ -35,7 +35,7 @@ ProjectName              = "" # must be supplied in command line
 
 # platforms configuration
 ConfigPath2008       = "ConfigVCAuto/Configuration"
-ConfigPath2010       = "ConfigVCAuto/Configuration.X"
+ConfigPath2010       = "ConfigVCAuto/ConfigurationX"
 ConfigPathQtTarget   = "" # will be generated as: ProjectName+".pro"
 ConfigPathMAKETarget = "makefile"
 ConfigPathMAKE       = os.path.join( sys.path[0], "Targets.list" )
@@ -253,17 +253,7 @@ def ParseCommandLine():
       elif OptionName == "-i" or OptionName == "--include-dir": IncludeDirs.append( CheckArgs( i+1, argc, "Directory name expected for option -i" ) )
       elif OptionName == "-c" or OptionName == "--MSVC-config":
          ConfigPath2008 = CheckArgs( i+1, argc, "File name expected for option -c" )
-
-         # FIXME: its a dirty hack
-         if (platform.system() == "Windows"):
-            ConfigPath2010 = ConfigPath2008 + ".X";
-         else:
-#            TmpConfigPath2008 = ConfigPath2008
-#            if(not (platform.system() == "Windows")):
-#               # remove "."
-#               TmpConfigPath2008 = TmpConfigPath2008[0:len(TmpConfigPath2008)-1]
-            ConfigPath2010 = ConfigPath2008 + ".X";
-
+         ConfigPath2010 = ConfigPath2008 + "X";
       elif OptionName == "-m" or OptionName == "--makefile-config": ConfigPathMAKE = CheckArgs( i+1, argc, "File name expected for option -m" )
       elif OptionName == "-t" or OptionName == "--makefile-target": 
          ConfigPathMAKETarget = CheckArgs( i+1, argc, "File name expected for option -t" )
