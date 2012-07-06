@@ -186,11 +186,11 @@ Available options:
    -pr    - project name''' )
    sys.exit(0)
 
-def CheckArgs( i, NumArgs, Message ):
-   if i >= NumArgs:
+def CheckArgs( i, argv, Message ):
+   if i >= len(argv):
       print( Message )
       sys.exit(255)
-   return sys.argv[i]
+   return argv[i]
 
 def LoadPlatformsExcludes( ExcludesFileName ):
    global ExcludeFilesVS
@@ -206,7 +206,7 @@ def LoadPlatformsExcludes( ExcludesFileName ):
       elif Platform == "MAKE": ExcludeFilesMake.append( FileName )
       elif Platform == "ANDROID": ExcludeFilesAndroid.append( FileName )
   
-def ParseCommandLine():
+def ParseCommandLine(argv):
    global OutputFileName
    global VisualStudio2008
    global VisualStudio2010
@@ -235,47 +235,47 @@ def ParseCommandLine():
    global GenerateAndroid
    global GeneratingCore
    global Verbose
-   argc = len(sys.argv)
+   argc = len(argv)
    for i in range(1, argc, 2):
-      OptionName = sys.argv[i]
-      OptionValue = sys.argv[i+1]
+      OptionName = CheckArgs( i, argv, "Option name expected" )
+      OptionValue = CheckArgs( i+1, argv, "Option value expected" )
       if OptionName == "-v" or OptionName == "--verbose": Verbose = True
-      if OptionName == "-s" or OptionName == "--source-dir": SourceDir = CheckArgs( i+1, argc, "Directory name expected for option -s" )
-      elif OptionName == "-o" or OptionName == "--output-file-MSVC": OutputFileName = CheckArgs( i+1, argc, "File name expected for option -o" )
+      if OptionName == "-s" or OptionName == "--source-dir": SourceDir = CheckArgs( i+1, argv, "Directory name expected for option -s" )
+      elif OptionName == "-o" or OptionName == "--output-file-MSVC": OutputFileName = CheckArgs( i+1, argv, "File name expected for option -o" )
       elif OptionName == "-ver" or OptionName == "--MSVC-version":
          GenerateVCPROJ = True
-         CompilerVer = CheckArgs( i+1, argc, "MSVC version expected for option -ver" )
+         CompilerVer = CheckArgs( i+1, argv, "MSVC version expected for option -ver" )
 			# convert Compiler ver, if needed
          if CompilerVer == "2008":
             VisualStudio2008 = True
          elif CompilerVer == "2010":
             VisualStudio2010 = True
-      elif OptionName == "-i" or OptionName == "--include-dir": IncludeDirs.append( CheckArgs( i+1, argc, "Directory name expected for option -i" ) )
+      elif OptionName == "-i" or OptionName == "--include-dir": IncludeDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -i" ) )
       elif OptionName == "-c" or OptionName == "--MSVC-config":
-         ConfigPath2008 = CheckArgs( i+1, argc, "File name expected for option -c" )
+         ConfigPath2008 = CheckArgs( i+1, argv, "File name expected for option -c" )
          ConfigPath2010 = ConfigPath2008 + "X";
-      elif OptionName == "-m" or OptionName == "--makefile-config": ConfigPathMAKE = CheckArgs( i+1, argc, "File name expected for option -m" )
+      elif OptionName == "-m" or OptionName == "--makefile-config": ConfigPathMAKE = CheckArgs( i+1, argv, "File name expected for option -m" )
       elif OptionName == "-t" or OptionName == "--makefile-target": 
-         ConfigPathMAKETarget = CheckArgs( i+1, argc, "File name expected for option -t" )
+         ConfigPathMAKETarget = CheckArgs( i+1, argv, "File name expected for option -t" )
          GenerateMAKE = True
-      elif OptionName == "-cc" or OptionName == "--compiler-name" : CompilerName = CheckArgs( i+1, argc, "File name expected for option -cc" )
-      elif OptionName == "-ar" or OptionName == "--ar-name"       : ArName = CheckArgs( i+1, argc, "File name expected for option -ar" )
-      elif OptionName == "-ex" or OptionName == "--exclude-dir"   : ExcludeDirs.append( CheckArgs( i+1, argc, "Directory name expected for option -ex" ) )
-      elif OptionName == "-exf" or OptionName == "--exclude-file" : ExcludeFiles.append( CheckArgs( i+1, argc, "File name expected for option -exf" ) )
-      elif OptionName == "-pr" or OptionName == "--project-name"  : ProjectName = CheckArgs( i+1, argc, "Project name expected for option -pr" )
-      elif OptionName == "-plex" or OptionName == "--platforms-excludes" : LoadPlatformsExcludes( CheckArgs( i+1, argc, "Expected excludes filename for option -plex" ) )
+      elif OptionName == "-cc" or OptionName == "--compiler-name" : CompilerName = CheckArgs( i+1, argv, "File name expected for option -cc" )
+      elif OptionName == "-ar" or OptionName == "--ar-name"       : ArName = CheckArgs( i+1, argv, "File name expected for option -ar" )
+      elif OptionName == "-ex" or OptionName == "--exclude-dir"   : ExcludeDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -ex" ) )
+      elif OptionName == "-exf" or OptionName == "--exclude-file" : ExcludeFiles.append( CheckArgs( i+1, argv, "File name expected for option -exf" ) )
+      elif OptionName == "-pr" or OptionName == "--project-name"  : ProjectName = CheckArgs( i+1, argv, "Project name expected for option -pr" )
+      elif OptionName == "-plex" or OptionName == "--platforms-excludes" : LoadPlatformsExcludes( CheckArgs( i+1, argv, "Expected excludes filename for option -plex" ) )
       elif OptionName == "-qt" or OptionName == "--qt-epilog"     : 
-         ConfigQtEpilog = CheckArgs( i+1, argc, "Epilog file name expected for option -qt" )
+         ConfigQtEpilog = CheckArgs( i+1, argv, "Epilog file name expected for option -qt" )
          GenerateQT = True
-      elif OptionName == "-andr1" or OptionName == "--android-prolog"     : ConfigAndroidProlog = CheckArgs( i+1, argc, "Epilog file name expected for option -andr1" )
-      elif OptionName == "-andr2" or OptionName == "--android-epilog"     : ConfigAndroidEpilog = CheckArgs( i+1, argc, "Epilog file name expected for option -andr2" )
+      elif OptionName == "-andr1" or OptionName == "--android-prolog"     : ConfigAndroidProlog = CheckArgs( i+1, argv, "Epilog file name expected for option -andr1" )
+      elif OptionName == "-andr2" or OptionName == "--android-epilog"     : ConfigAndroidEpilog = CheckArgs( i+1, argv, "Epilog file name expected for option -andr2" )
       elif OptionName == "-androut" or OptionName == "--android-out":
-         ConfigPathAndroidTarget = CheckArgs( i+1, argc, "Output .mk file name expected for option -androut" )
+         ConfigPathAndroidTarget = CheckArgs( i+1, argv, "Output .mk file name expected for option -androut" )
          GenerateAndroid = True
       elif OptionName == "-k"  or OptionName == "--core"          :
          DEFAULT_OBJ_DIR = CORE_OBJ_DIR
          GeneratingCore = True
-      else: CheckArgs( 0, 0, "Invalid option: " + OptionName )
+      else: CheckArgs( 0, [], "Invalid option: " + OptionName )
    if not ProjectName:
       print( "A valid project name must be specified with -pr option" )
       sys.exit( 255 )
@@ -342,7 +342,7 @@ if len(sys.argv) < 2:
 	if not Verbose: ShowLogo()
 	ShowHelp()
 
-ParseCommandLine()
+ParseCommandLine(sys.argv)
 
 if Verbose: print( "Project name:", ProjectName)
 
