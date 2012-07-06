@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.12
-# (01/06/2012)
+# Version 0.6.20
+# (06/07/2012)
 # (C) Kosarevsky Sergey, 2005-2012
 # support@linderdaum.com
 # Part of Linderdaum Engine
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.12 (01/06/2012)"
+VCAutoVersion = "0.6.20 (06/07/2012)"
 
 Verbose = False
 
@@ -22,6 +22,7 @@ GenerateVCPROJ  = False
 GenerateMAKE    = False
 GenerateQT      = False
 GenerateAndroid = False
+RunBatchBuild   = ""
 
 # default source dir
 SourceDir     = "Src"
@@ -102,6 +103,28 @@ ExcludeFiles = []
 # hack
 GeneratingCore = False
 
+def ClearAll():
+   global OutputFileName
+   global ProjectName
+   global IncludeDirs
+   global IncludeFiles
+   global IncludeFilesDirs
+   global SourceFiles
+   global SourceFilesDirs
+   global ObjectFiles
+   global ExcludeDirs
+   global ExcludeFiles
+   OutputFileName = ""
+   ProjectName    = ""
+   IncludeDirs  = []
+   IncludeFiles = []
+   IncludeFilesDirs = []
+   SourceFiles  = []
+   SourceFilesDirs  = []
+   ObjectFiles  = []
+   ExcludeDirs  = [".svn"]
+   ExcludeFiles = []
+
 def IsHeaderFile(FileName):
    if FileName.endswith(".h"): return True
    if FileName.endswith(".hh"): return True
@@ -181,6 +204,7 @@ Available options:
    -k     - use Out/Obj for output instead of Out (this is used to compile engine's core)
    -cc    - GNU compiler name
    -ar    - GNU archiver name
+   -b     - run specified batch script (overrides all other command line options)
    -ex    - exclude directory from project (can repeat)
    -exf   - exclude file from project (can repeat)
    -pr    - project name''' )
@@ -206,7 +230,7 @@ def LoadPlatformsExcludes( ExcludesFileName ):
       elif Platform == "MAKE": ExcludeFilesMake.append( FileName )
       elif Platform == "ANDROID": ExcludeFilesAndroid.append( FileName )
   
-def ParseCommandLine(argv):
+def ParseCommandLine(argv, BatchBuild):
    global OutputFileName
    global VisualStudio2008
    global VisualStudio2010
@@ -235,6 +259,7 @@ def ParseCommandLine(argv):
    global GenerateAndroid
    global GeneratingCore
    global Verbose
+   global RunBatchBuild
    argc = len(argv)
    for i in range(1, argc, 2):
       OptionName = CheckArgs( i, argv, "Option name expected" )
@@ -263,6 +288,7 @@ def ParseCommandLine(argv):
       elif OptionName == "-ex" or OptionName == "--exclude-dir"   : ExcludeDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -ex" ) )
       elif OptionName == "-exf" or OptionName == "--exclude-file" : ExcludeFiles.append( CheckArgs( i+1, argv, "File name expected for option -exf" ) )
       elif OptionName == "-pr" or OptionName == "--project-name"  : ProjectName = CheckArgs( i+1, argv, "Project name expected for option -pr" )
+      elif OptionName == "-b" or OptionName == "--batch-build"    : RunBatchBuild = CheckArgs( i+1, argv, "Expected batch build file name for option -b" )
       elif OptionName == "-plex" or OptionName == "--platforms-excludes" : LoadPlatformsExcludes( CheckArgs( i+1, argv, "Expected excludes filename for option -plex" ) )
       elif OptionName == "-qt" or OptionName == "--qt-epilog"     : 
          ConfigQtEpilog = CheckArgs( i+1, argv, "Epilog file name expected for option -qt" )
@@ -276,7 +302,7 @@ def ParseCommandLine(argv):
          DEFAULT_OBJ_DIR = CORE_OBJ_DIR
          GeneratingCore = True
       else: CheckArgs( 0, [], "Invalid option: " + OptionName )
-   if not ProjectName:
+   if ( not ProjectName and not RunBatchBuild ) and BatchBuild:
       print( "A valid project name must be specified with -pr option" )
       sys.exit( 255 )
    if not ModuleName:  ModuleName = ProjectName + ".exe"
@@ -330,6 +356,259 @@ def Scan(Path):
              SourceFilesDirs.append( Path )
              ObjectFiles.append( MakeObjectFile( Item ) )
 
+def GenerateAll():
+   if Verbose: print( "Project name:", ProjectName)
+
+   IncludeDirs.append( SourceDir )
+
+   # create VC config
+   if Verbose: print( "Reading directory tree from: ", SourceDir )
+
+   Scan( SourceDir )
+
+   if Verbose: print( "Reading make config from:", ConfigPathMAKE )
+   if VisualStudio2008:
+      if Verbose: print( "Reading MSVC config from:", ConfigPath2008 )
+   if VisualStudio2010:
+      if Verbose: print( "Reading MSVC config from:", ConfigPath2010 )
+   if Verbose: print("")
+
+   if GenerateVCPROJ and VisualStudio2008:
+      FileName = OutputFileName + ".vcproj"
+      if Verbose: print( "Generating: ", FileName )
+      Out = open( FileName, 'wb' )
+      Out.close()
+      Out = open( FileName, 'a' )
+      Out.write( "<?xml version=\"1.0\" encoding=\"windows-1251\"?>\n" )
+      Out.write( "<VisualStudioProject\n" )
+      Out.write( MultiTab(1) + "ProjectType=\"Visual C++\"\n" )
+      Out.write( MultiTab(1) + "Version=\"9,00\"\n" )
+      # copy Configuration. template
+      RealConf2008 = ConfigPath2008
+   #   if(not (platform.system() == "Windows")):
+   #      RealConf2008 = ConfigPath2008[0:len(ConfigPath2008)-1]
+
+      Out.write( ReplacePatterns( open( RealConf2008 ).read() ) )
+      # write files header
+      Out.write( "\n" + MultiTab(1) + "<Files>\n" )
+      Out.write( MultiTab(2) + "<Filter\n" )
+      Out.write( MultiTab(3) + "Name=\"Source Files\"\n" )
+      Out.write( MultiTab(3) + "UniqueIdentifier=\"{" + str.upper(str(uuid.uuid5(uuid.NAMESPACE_URL, ProjectName))) + "}\">\n" )
+      # generate VC2008 output
+      GenVC2008( 3, Out, SourceDir )
+      Out.write( MultiTab(2) + "</Filter>\n" )
+      Out.write( MultiTab(1) + "</Files>\n" )
+      Out.write( "</VisualStudioProject>\n" )
+      Out.close()
+
+   if GenerateVCPROJ and VisualStudio2010:
+      FileName = OutputFileName + ".vcxproj"
+      if Verbose: print( "Generating: ", FileName )
+      Out = open( FileName, 'wb' )
+      Out.write( codecs.BOM_UTF8 )
+      Out.close()
+      Out = open( FileName, 'a' )
+      # copy Configuration. template
+      Out.write( ReplacePatterns( open( ConfigPath2010 ).read() ) )
+      # source files       
+      Out.write( MultiTab(1) + "<ItemGroup>\n" )
+      for File in SourceFiles: Out.write( MultiTab(2) + "<ClCompile Include= \"" + ReplacePathSep(File) + "\" />\n" )
+      Out.write( MultiTab(1) + "</ItemGroup>\n" )
+      # header files
+      Out.write( MultiTab(1) + "<ItemGroup>\n" )
+      for File in IncludeFiles: Out.write( MultiTab(2) + "<ClInclude Include= \"" + ReplacePathSep(File) + "\" />\n" )
+      Out.write( MultiTab(1) + "</ItemGroup>\n" )
+      # footer
+      Out.write( MultiTab(1) + "<Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\" />\n" )
+      Out.write( MultiTab(1) + "<ImportGroup Label=\"ExtensionTargets\">\n" )
+      Out.write( MultiTab(1) + "</ImportGroup>\n" )
+      Out.write( "</Project>\n" )
+      # filters
+      OutF = open( FileName + ".filters", 'wb' )
+      OutF.write( codecs.BOM_UTF8 )
+      OutF.close()
+      OutF = open( FileName + ".filters", 'a' )
+      OutF.write( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" )
+      OutF.write( "<Project ToolsVersion=\"4.0\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">\n" )
+      OutF.write( MultiTab(1) + "<ItemGroup>\n" )
+      for Dir in IncludeDirs:
+         if Dir.find("..") == 0: continue
+         OutF.write( MultiTab(2) + "<Filter Include=\"" + Dir + "\">\n" )
+         OutF.write( MultiTab(3) + "<UniqueIdentifier>{" + str(uuid.uuid4()) + "}</UniqueIdentifier>\n" )
+         OutF.write( MultiTab(2) + "</Filter>\n" )
+      OutF.write( MultiTab(1) + "</ItemGroup>\n" );
+
+      OutF.write( MultiTab(1) + "<ItemGroup>\n" )
+      for Index, File in enumerate(SourceFiles):
+         if File in ExcludeFilesVS: continue
+         OutF.write( MultiTab(2) + "<ClCompile Include=\"" + File + "\">\n" )
+         OutF.write( MultiTab(3) + "<Filter>" + SourceFilesDirs[Index] + "</Filter>\n" )
+         OutF.write( MultiTab(2) + "</ClCompile>\n" )
+      OutF.write( MultiTab(1) + "</ItemGroup>\n" )
+
+      OutF.write( MultiTab(1) + "<ItemGroup>\n" )
+      for Index, File in enumerate(IncludeFiles):
+         if File in ExcludeFilesVS: continue
+         OutF.write( MultiTab(2) + "<ClInclude Include=\"" + File + "\">\n" )
+         OutF.write( MultiTab(3) + "<Filter>" + IncludeFilesDirs[Index] + "</Filter>\n" )
+         OutF.write( MultiTab(2) + "</ClInclude>\n" )
+      OutF.write( MultiTab(1) + "</ItemGroup>\n" )
+
+      OutF.write( "</Project>" )
+      OutF.close()
+      Out.close()
+
+   # generate GNU output
+
+   if GenerateMAKE:
+      if Verbose: print( "Generating: ", ConfigPathMAKETarget )
+      Out = open( ConfigPathMAKETarget, 'w' )
+
+      # 0. "symbolic" header
+      Out.write( "# Autogenerated via VCauto " + VCAutoVersion + "\n\n" )
+
+      # 1. Common stuff like compiler names etc.
+      Out.write( "# Common defines" + "\n" )
+      Out.write( "CC = " + CompilerName + "\n\n" )
+      Out.write( "AR = " + ArName + "\n\n" )
+      Out.write( "CFLAGS = " + "\n\n" )
+      Out.write("# 32-bit build by default\n")
+      Out.write( "ARCHFLAGS = -m32\n\n")
+      Out.write( "CPPFLAGS = " + "\n\n" )
+      Out.write( "OBJDIR = " + DEFAULT_OBJ_DIR + "\n\n" )
+      Out.write( "OUTDIR = " + DEFAULT_OBJ_DIR + "\n\n" )
+      Out.write( "# Include directories\n" )
+
+      ObjDir = DEFAULT_OBJ_DIR
+
+      # 1.1. Toolchain override
+
+      Out.write("# Try to override the toolchain description\n")
+      Out.write("ifneq ($(TOOLCHAIN_FILE), \"\")\n\n")
+
+      Out.write("# include external definitions (GCC, ObjDir, AR etc.)\n")
+      Out.write("include $(TOOLCHAIN_FILE)\n\n")
+
+      Out.write("endif\n\n")
+
+      # 2. Include directories
+      IncDirList = open("include_dirs", "w")
+
+      Out.write( INCLUDE_DIRS_STRING + " = " + "-I . \\\n" )
+
+      for Name in IncludeDirs:
+         Out.write( MultiTab(1) + "-I " + ReplacePathSepUNIX(Name) + " \\\n" );
+         IncDirList.write("-I " + ReplacePathSepUNIX(Name) + " ")
+
+      IncDirList.close()
+
+      Out.write( "\nCOPTS = " )
+   #   Out.write( "$(" + INCLUDE_DIRS_STRING + ")" + "\n\n" )
+      Out.write( " @include_dirs\n " )
+
+      # 3. list of object files
+      Out.write( "\n# Object files list\n" )
+      Out.write( OBJS_STRING + " = " + " \\\n" )
+
+      ObjFileList = open("obj_files", "w")
+
+      for Name in ObjectFiles:
+         if Name in ExcludeFilesMake: continue
+         Out.write( MultiTab(1) + "$(OBJDIR)/" + ReplacePathSepUNIX(Name) + " \\\n" );
+         ObjFileList.write(ObjDir + "/" + ReplacePathSepUNIX(Name) + " ")
+
+      ObjFileList.close()
+
+      # 4. Object file compilation targets
+      Out.write( "\n# Object files\n\n" )
+
+      for Index, Name in enumerate(ObjectFiles):
+         if Name in ExcludeFilesMake: continue
+         Out.write( "$(OBJDIR)/" + ReplacePathSepUNIX(Name) + ": " + ReplacePathSepUNIX(SourceFiles[Index]) );
+         DepHeader = ReplacePathSepUNIX(MakeHeaderFile(SourceFiles[Index]))
+         if os.path.exists( DepHeader ):
+            Out.write( " " + DepHeader + "\n" )
+         else:
+            Out.write( "\n" )
+         Line = MultiTab(1) + "$(CC) $(COPTS) -MD -c " + ReplacePathSepUNIX(SourceFiles[Index]) + " -o $(OBJDIR)/" + ReplacePathSepUNIX(Name) + " $(CFLAGS)";
+         if IsCPPFile( SourceFiles[Index] ):
+            Out.write( Line + " $(CPPFLAGS)\n\n" )
+         else:
+            Out.write( Line + "\n\n" )
+
+      # 5. Targets > take them from Targets.list
+      Out.write( "\n# User-defined targets\n\n" )
+      Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigPathMAKE ).read() ) ) )
+
+      # 6. End of makefile
+      Out.write( "\n\n# End of Makefile\n" )
+
+   # 7. Generate .pro Qt-project
+   if GenerateQT:
+      if Verbose: print( "Generating: ", ConfigPathQtTarget )
+      Out = open( ConfigPathQtTarget, 'w' )
+      Out.write( "#\n" )
+      Out.write( "# Qt-project created by VCauto " + VCAutoVersion + "\n" )
+      Out.write( "#\n" )
+      Out.write( "\n" )
+
+      for File in IncludeFiles: 
+         Out.write( "HEADERS += " + ReplacePathSepUNIX(File) + "\n" )
+
+      Out.write( "\n" )
+
+      for Index, Name in enumerate(ObjectFiles):
+         if Name in ExcludeFilesQt: continue
+         Out.write( "SOURCES += " + ReplacePathSepUNIX(SourceFiles[Index]) + "\n" )
+
+      # 8. Add Qt epilog
+      if len(ConfigQtEpilog) > 0:
+         Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigQtEpilog ).read() ) ) )
+
+      Out.close()
+
+   # 9. Generate Android project
+   if GenerateAndroid:
+      if Verbose: print( "Generating: ", ConfigPathAndroidTarget )
+
+      try:
+         Out = open( ConfigPathAndroidTarget, 'w' )
+
+         # 10. Add Android prolog
+         if len(ConfigAndroidProlog) > 0:
+            Out.write( ReplacePatterns( open( ConfigAndroidProlog ).read() ) )
+
+         Out.write( "\n" )
+
+         # 11. Include directories
+         Out.write( "LOCAL_C_INCLUDES += \\\n" )
+
+         Prefix = "../";
+
+         if GeneratingCore: Prefix = "../../";
+
+         for Name in IncludeDirs:
+            Out.write( MultiTab(1) + "$(LOCAL_PATH)/" + Prefix + ReplacePathSepUNIX(Name) + " \\\n" );
+
+         Out.write( "\n" )
+         Out.write( "LOCAL_SRC_FILES += \\\n" )
+
+         for Name in SourceFiles:
+            if Name in ExcludeFilesAndroid: 
+               if Verbose: print( "   Android excluded:", Name )
+               continue
+            Out.write( MultiTab(1) + Prefix + ReplacePathSepUNIX(Name) + " \\\n" );
+
+         Out.write( "\n" )
+
+         # 12. Add Android epilog
+         if len(ConfigAndroidEpilog) > 0:
+            Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigAndroidEpilog ).read() ) ) )
+  
+         Out.close()
+      except IOError:
+         if Verbose: print( "Cannot open: ", ConfigPathAndroidTarget, " --- skipping" )
+
 # 
 # MAIN
 #
@@ -342,257 +621,20 @@ if len(sys.argv) < 2:
 	if not Verbose: ShowLogo()
 	ShowHelp()
 
-ParseCommandLine(sys.argv)
+ParseCommandLine(sys.argv, True)
 
-if Verbose: print( "Project name:", ProjectName)
-
-IncludeDirs.append( SourceDir )
-
-# create VC config
-if Verbose: print( "Reading directory tree from: ", SourceDir )
-
-Scan( SourceDir )
-
-if Verbose: print( "Reading make config from:", ConfigPathMAKE )
-if VisualStudio2008:
-   if Verbose: print( "Reading MSVC config from:", ConfigPath2008 )
-if VisualStudio2010:
-   if Verbose: print( "Reading MSVC config from:", ConfigPath2010 )
-if Verbose: print("")
-
-if GenerateVCPROJ and VisualStudio2008:
-   FileName = OutputFileName + ".vcproj"
-   if Verbose: print( "Generating: ", FileName )
-   Out = open( FileName, 'wb' )
-   Out.close()
-   Out = open( FileName, 'a' )
-   Out.write( "<?xml version=\"1.0\" encoding=\"windows-1251\"?>\n" )
-   Out.write( "<VisualStudioProject\n" )
-   Out.write( MultiTab(1) + "ProjectType=\"Visual C++\"\n" )
-   Out.write( MultiTab(1) + "Version=\"9,00\"\n" )
-   # copy Configuration. template
-   RealConf2008 = ConfigPath2008
-#   if(not (platform.system() == "Windows")):
-#      RealConf2008 = ConfigPath2008[0:len(ConfigPath2008)-1]
-
-   Out.write( ReplacePatterns( open( RealConf2008 ).read() ) )
-   # write files header
-   Out.write( "\n" + MultiTab(1) + "<Files>\n" )
-   Out.write( MultiTab(2) + "<Filter\n" )
-   Out.write( MultiTab(3) + "Name=\"Source Files\"\n" )
-   Out.write( MultiTab(3) + "UniqueIdentifier=\"{" + str.upper(str(uuid.uuid5(uuid.NAMESPACE_URL, ProjectName))) + "}\">\n" )
-   # generate VC2008 output
-   GenVC2008( 3, Out, SourceDir )
-   Out.write( MultiTab(2) + "</Filter>\n" )
-   Out.write( MultiTab(1) + "</Files>\n" )
-   Out.write( "</VisualStudioProject>\n" )
-   Out.close()
-
-if GenerateVCPROJ and VisualStudio2010:
-   FileName = OutputFileName + ".vcxproj"
-   if Verbose: print( "Generating: ", FileName )
-   Out = open( FileName, 'wb' )
-   Out.write( codecs.BOM_UTF8 )
-   Out.close()
-   Out = open( FileName, 'a' )
-   # copy Configuration. template
-   Out.write( ReplacePatterns( open( ConfigPath2010 ).read() ) )
-   # source files       
-   Out.write( MultiTab(1) + "<ItemGroup>\n" )
-   for File in SourceFiles: Out.write( MultiTab(2) + "<ClCompile Include= \"" + ReplacePathSep(File) + "\" />\n" )
-   Out.write( MultiTab(1) + "</ItemGroup>\n" )
-   # header files
-   Out.write( MultiTab(1) + "<ItemGroup>\n" )
-   for File in IncludeFiles: Out.write( MultiTab(2) + "<ClInclude Include= \"" + ReplacePathSep(File) + "\" />\n" )
-   Out.write( MultiTab(1) + "</ItemGroup>\n" )
-   # footer
-   Out.write( MultiTab(1) + "<Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\" />\n" )
-   Out.write( MultiTab(1) + "<ImportGroup Label=\"ExtensionTargets\">\n" )
-   Out.write( MultiTab(1) + "</ImportGroup>\n" )
-   Out.write( "</Project>\n" )
-   # filters
-   OutF = open( FileName + ".filters", 'wb' )
-   OutF.write( codecs.BOM_UTF8 )
-   OutF.close()
-   OutF = open( FileName + ".filters", 'a' )
-   OutF.write( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" )
-   OutF.write( "<Project ToolsVersion=\"4.0\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">\n" )
-   OutF.write( MultiTab(1) + "<ItemGroup>\n" )
-   for Dir in IncludeDirs:
-      if Dir.find("..") == 0: continue
-      OutF.write( MultiTab(2) + "<Filter Include=\"" + Dir + "\">\n" )
-      OutF.write( MultiTab(3) + "<UniqueIdentifier>{" + str(uuid.uuid4()) + "}</UniqueIdentifier>\n" )
-      OutF.write( MultiTab(2) + "</Filter>\n" )
-   OutF.write( MultiTab(1) + "</ItemGroup>\n" );
-
-   OutF.write( MultiTab(1) + "<ItemGroup>\n" )
-   for Index, File in enumerate(SourceFiles):
-      if File in ExcludeFilesVS: continue
-      OutF.write( MultiTab(2) + "<ClCompile Include=\"" + File + "\">\n" )
-      OutF.write( MultiTab(3) + "<Filter>" + SourceFilesDirs[Index] + "</Filter>\n" )
-      OutF.write( MultiTab(2) + "</ClCompile>\n" )
-   OutF.write( MultiTab(1) + "</ItemGroup>\n" )
-
-   OutF.write( MultiTab(1) + "<ItemGroup>\n" )
-   for Index, File in enumerate(IncludeFiles):
-      if File in ExcludeFilesVS: continue
-      OutF.write( MultiTab(2) + "<ClInclude Include=\"" + File + "\">\n" )
-      OutF.write( MultiTab(3) + "<Filter>" + IncludeFilesDirs[Index] + "</Filter>\n" )
-      OutF.write( MultiTab(2) + "</ClInclude>\n" )
-   OutF.write( MultiTab(1) + "</ItemGroup>\n" )
-
-   OutF.write( "</Project>" )
-   OutF.close()
-   Out.close()
-
-# generate GNU output
-
-if GenerateMAKE:
-   if Verbose: print( "Generating: ", ConfigPathMAKETarget )
-   Out = open( ConfigPathMAKETarget, 'w' )
-
-   # 0. "symbolic" header
-   Out.write( "# Autogenerated via VCauto " + VCAutoVersion + "\n\n" )
-
-   # 1. Common stuff like compiler names etc.
-   Out.write( "# Common defines" + "\n" )
-   Out.write( "CC = " + CompilerName + "\n\n" )
-   Out.write( "AR = " + ArName + "\n\n" )
-   Out.write( "CFLAGS = " + "\n\n" )
-   Out.write("# 32-bit build by default\n")
-   Out.write( "ARCHFLAGS = -m32\n\n")
-   Out.write( "CPPFLAGS = " + "\n\n" )
-   Out.write( "OBJDIR = " + DEFAULT_OBJ_DIR + "\n\n" )
-   Out.write( "OUTDIR = " + DEFAULT_OBJ_DIR + "\n\n" )
-   Out.write( "# Include directories\n" )
-
-   ObjDir = DEFAULT_OBJ_DIR
-
-   # 1.1. Toolchain override
-
-   Out.write("# Try to override the toolchain description\n")
-   Out.write("ifneq ($(TOOLCHAIN_FILE), \"\")\n\n")
-
-   Out.write("# include external definitions (GCC, ObjDir, AR etc.)\n")
-   Out.write("include $(TOOLCHAIN_FILE)\n\n")
-
-   Out.write("endif\n\n")
-
-   # 2. Include directories
-   IncDirList = open("include_dirs", "w")
-
-   Out.write( INCLUDE_DIRS_STRING + " = " + "-I . \\\n" )
-
-   for Name in IncludeDirs:
-      Out.write( MultiTab(1) + "-I " + ReplacePathSepUNIX(Name) + " \\\n" );
-      IncDirList.write("-I " + ReplacePathSepUNIX(Name) + " ")
-
-   IncDirList.close()
-
-   Out.write( "\nCOPTS = " )
-#   Out.write( "$(" + INCLUDE_DIRS_STRING + ")" + "\n\n" )
-   Out.write( " @include_dirs\n " )
-
-   # 3. list of object files
-   Out.write( "\n# Object files list\n" )
-   Out.write( OBJS_STRING + " = " + " \\\n" )
-
-   ObjFileList = open("obj_files", "w")
-
-   for Name in ObjectFiles:
-      if Name in ExcludeFilesMake: continue
-      Out.write( MultiTab(1) + "$(OBJDIR)/" + ReplacePathSepUNIX(Name) + " \\\n" );
-      ObjFileList.write(ObjDir + "/" + ReplacePathSepUNIX(Name) + " ")
-
-   ObjFileList.close()
-
-   # 4. Object file compilation targets
-   Out.write( "\n# Object files\n\n" )
-
-   for Index, Name in enumerate(ObjectFiles):
-      if Name in ExcludeFilesMake: continue
-      Out.write( "$(OBJDIR)/" + ReplacePathSepUNIX(Name) + ": " + ReplacePathSepUNIX(SourceFiles[Index]) );
-      DepHeader = ReplacePathSepUNIX(MakeHeaderFile(SourceFiles[Index]))
-      if os.path.exists( DepHeader ):
-         Out.write( " " + DepHeader + "\n" )
-      else:
-         Out.write( "\n" )
-      Line = MultiTab(1) + "$(CC) $(COPTS) -MD -c " + ReplacePathSepUNIX(SourceFiles[Index]) + " -o $(OBJDIR)/" + ReplacePathSepUNIX(Name) + " $(CFLAGS)";
-      if IsCPPFile( SourceFiles[Index] ):
-         Out.write( Line + " $(CPPFLAGS)\n\n" )
-      else:
-         Out.write( Line + "\n\n" )
-
-   # 5. Targets > take them from Targets.list
-   Out.write( "\n# User-defined targets\n\n" )
-   Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigPathMAKE ).read() ) ) )
-
-   # 6. End of makefile
-   Out.write( "\n\n# End of Makefile\n" )
-
-# 7. Generate .pro Qt-project
-if GenerateQT:
-   if Verbose: print( "Generating: ", ConfigPathQtTarget )
-   Out = open( ConfigPathQtTarget, 'w' )
-   Out.write( "#\n" )
-   Out.write( "# Qt-project created by VCauto " + VCAutoVersion + "\n" )
-   Out.write( "#\n" )
-   Out.write( "\n" )
-
-   for File in IncludeFiles: 
-      Out.write( "HEADERS += " + ReplacePathSepUNIX(File) + "\n" )
-
-   Out.write( "\n" )
-
-   for Index, Name in enumerate(ObjectFiles):
-      if Name in ExcludeFilesQt: continue
-      Out.write( "SOURCES += " + ReplacePathSepUNIX(SourceFiles[Index]) + "\n" )
-
-   # 8. Add Qt epilog
-   if len(ConfigQtEpilog) > 0:
-      Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigQtEpilog ).read() ) ) )
-
-   Out.close()
-
-# 9. Generate Android project
-if GenerateAndroid:
-   if Verbose: print( "Generating: ", ConfigPathAndroidTarget )
-
-   try:
-      Out = open( ConfigPathAndroidTarget, 'w' )
-
-      # 10. Add Android prolog
-      if len(ConfigAndroidProlog) > 0:
-         Out.write( ReplacePatterns( open( ConfigAndroidProlog ).read() ) )
-
-      Out.write( "\n" )
-
-      # 11. Include directories
-      Out.write( "LOCAL_C_INCLUDES += \\\n" )
-
-      Prefix = "../";
-
-      if GeneratingCore: Prefix = "../../";
-
-      for Name in IncludeDirs:
-         Out.write( MultiTab(1) + "$(LOCAL_PATH)/" + Prefix + ReplacePathSepUNIX(Name) + " \\\n" );
-
-      Out.write( "\n" )
-      Out.write( "LOCAL_SRC_FILES += \\\n" )
-
-      for Name in SourceFiles:
-         if Name in ExcludeFilesAndroid: 
-            if Verbose: print( "   Android excluded:", Name )
-            continue
-         Out.write( MultiTab(1) + Prefix + ReplacePathSepUNIX(Name) + " \\\n" );
-
-      Out.write( "\n" )
-
-      # 12. Add Android epilog
-      if len(ConfigAndroidEpilog) > 0:
-         Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigAndroidEpilog ).read() ) ) )
-
-      Out.close()
-   except IOError:
-      if Verbose: print( "Cannot open: ", ConfigPathAndroidTarget, " --- skipping" )
-     
+if ( not RunBatchBuild ):
+   # just run and exit
+   GenerateAll()
+else:
+   # process all commands
+   print( "Running batch script:", RunBatchBuild )
+   OldDir = os.getcwd()
+   for Line in open( RunBatchBuild ).readlines():
+      Command = Line.split();
+      print( "Working path :", Command[0] )
+      ClearAll()
+      ParseCommandLine( Command, False )
+      os.chdir( Command[0] )
+      GenerateAll()
+      os.chdir( OldDir )
