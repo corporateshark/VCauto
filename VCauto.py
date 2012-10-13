@@ -502,9 +502,21 @@ def GenerateAll():
 
       IncDirList.close()
 
+      Out.write("\n\n# iOS SDK's GCC4.0 does not support compressed command line, at least not in an obvious way\n")
+
+      Out.write("ifdef IOS_BUILD\n")
+
+      Out.write("\nCOPTS = $(INCLUDE_DIRS) \n\n")
+
+      Out.write("# Normal GCC compilers go here\n")
+
+      Out.write("else\n")
+
       Out.write( "\nCOPTS = " )
    #   Out.write( "$(" + INCLUDE_DIRS_STRING + ")" + "\n\n" )
-      Out.write( " @include_dirs\n " )
+      Out.write( " @include_dirs \n" )
+
+      Out.write("\nendif\n")
 
       # 3. list of object files
       Out.write( "\n# Object files list\n" )
