@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.20
-# (06/07/2012)
+# Version 0.6.21
+# (16/10/2012)
 # (C) Kosarevsky Sergey, 2005-2012
 # support@linderdaum.com
 # Part of Linderdaum Engine
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.20 (06/07/2012)"
+VCAutoVersion = "0.6.21 (16/10/2012)"
 
 Verbose = False
 
@@ -114,6 +114,9 @@ def ClearAll():
    global ObjectFiles
    global ExcludeDirs
    global ExcludeFiles
+   global ModuleName
+   global MainCPPName
+   global ConfigPathQtTarget
    OutputFileName = ""
    ProjectName    = ""
    IncludeDirs  = []
@@ -124,6 +127,9 @@ def ClearAll():
    ObjectFiles  = []
    ExcludeDirs  = [".svn"]
    ExcludeFiles = []
+   ModuleName   = ""
+   MainCPPName  = ""
+   ConfigPathQtTarget = ""
 
 def IsHeaderFile(FileName):
    if FileName.endswith(".h"): return True
