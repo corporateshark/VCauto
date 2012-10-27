@@ -548,7 +548,8 @@ def GenerateAll():
             Out.write( " " + DepHeader + "\n" )
          else:
             Out.write( "\n" )
-         Line = MultiTab(1) + "$(CC) $(COPTS) -MD -c " + ReplacePathSepUNIX(SourceFiles[Index]) + " -o $(OBJDIR)/" + ReplacePathSepUNIX(Name) + " $(CFLAGS)";
+         # -MD option is not used right now, but it slows down the compilation
+         Line = MultiTab(1) + "$(CC) $(COPTS) -c " + ReplacePathSepUNIX(SourceFiles[Index]) + " -o $(OBJDIR)/" + ReplacePathSepUNIX(Name) + " $(CFLAGS)";
          if IsCPPFile( SourceFiles[Index] ):
             Out.write( Line + " $(CPPFLAGS)\n\n" )
          else:
