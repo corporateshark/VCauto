@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.21
-# (16/10/2012)
+# Version 0.6.22
+# (01/11/2012)
 # (C) Kosarevsky Sergey, 2005-2012
 # support@linderdaum.com
 # Part of Linderdaum Engine
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.21 (16/10/2012)"
+VCAutoVersion = "0.6.22 (01/11/2012)"
 
 Verbose = False
 
@@ -45,6 +45,8 @@ CompilerName         = "gcc"
 ArName               = "ar"
 ModuleName           = "" # must be supplied in command line or will be generated as: ProjectName+".exe"
 MainCPPName          = "" # must be supplied in command line or will be generated as: ProjectName+".cpp"
+ObjFilesList         = "obj_files"
+IncludeDirsList      = "include_dirs"
 
 # Qt configuration
 DefaultQtEpilog      = ""
@@ -213,6 +215,8 @@ Available options:
    -b     - run specified batch script (overrides all other command line options)
    -ex    - exclude directory from project (can repeat)
    -exf   - exclude file from project (can repeat)
+   -olist - temporary output list of object files (default: obj_files)
+   -ilist - temporary output list of include dirs (default: include_dirs)
    -pr    - project name''' )
    sys.exit(0)
 
@@ -266,6 +270,8 @@ def ParseCommandLine(argv, BatchBuild):
    global GeneratingCore
    global Verbose
    global RunBatchBuild
+   global ObjFilesList
+   global IncludeDirsList
    argc = len(argv)
    for i in range(1, argc, 2):
       OptionName = CheckArgs( i, argv, "Option name expected" )
@@ -296,6 +302,8 @@ def ParseCommandLine(argv, BatchBuild):
       elif OptionName == "-pr" or OptionName == "--project-name"  : ProjectName = CheckArgs( i+1, argv, "Project name expected for option -pr" )
       elif OptionName == "-b" or OptionName == "--batch-build"    : RunBatchBuild = CheckArgs( i+1, argv, "Expected batch build file name for option -b" )
       elif OptionName == "-plex" or OptionName == "--platforms-excludes" : LoadPlatformsExcludes( CheckArgs( i+1, argv, "Expected excludes filename for option -plex" ) )
+      elif OptionName == "-olist" : ObjFilesList = CheckArgs( i+1, argv, "Expected file name for option -olist" )
+      elif OptionName == "-ilist" : IncludeDirsList = CheckArgs( i+1, argv, "Expected file name for option -ilist" )
       elif OptionName == "-qt" or OptionName == "--qt-epilog"     : 
          ConfigQtEpilog = CheckArgs( i+1, argv, "Epilog file name expected for option -qt" )
          GenerateQT = True
@@ -498,7 +506,7 @@ def GenerateAll():
       Out.write("endif\n\n")
 
       # 2. Include directories
-      IncDirList = open("include_dirs", "w")
+      IncDirList = open( IncludeDirsList, "w")
 
       Out.write( INCLUDE_DIRS_STRING + " = " + "-I . \\\n" )
 
@@ -520,7 +528,7 @@ def GenerateAll():
 
       Out.write( "\nCOPTS = " )
    #   Out.write( "$(" + INCLUDE_DIRS_STRING + ")" + "\n\n" )
-      Out.write( " @include_dirs \n" )
+      Out.write( " @" +IncludeDirsList+ " \n" )
 
       Out.write("\nendif\n")
 
@@ -528,7 +536,7 @@ def GenerateAll():
       Out.write( "\n# Object files list\n" )
       Out.write( OBJS_STRING + " = " + " \\\n" )
 
-      ObjFileList = open("obj_files", "w")
+      ObjFileList = open( ObjFilesList, "w" )
 
       for Name in ObjectFiles:
          if Name in ExcludeFilesMake: continue
