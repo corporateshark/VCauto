@@ -34,6 +34,9 @@ SDKPath = os.path.join("..", "..")
 OutputFileName           = "" # .vcproj or .vcxproj will be added automatically
 ProjectName              = "" # must be supplied in command line
 
+# Library or App
+ProjectType = "exe"
+
 # platforms configuration
 ConfigPath2008       = "ConfigVCAuto/Configuration"
 ConfigPath2010       = "ConfigVCAuto/ConfigurationX"
@@ -260,6 +263,7 @@ def ParseCommandLine(argv, BatchBuild):
    global ExcludeDirs
    global ExcludeFiles
    global ProjectName
+   global ProjectType
    global ModuleName
    global MainCPPName
    global DEFAULT_OBJ_DIR
@@ -295,6 +299,7 @@ def ParseCommandLine(argv, BatchBuild):
       elif OptionName == "-t" or OptionName == "--makefile-target": 
          ConfigPathMAKETarget = CheckArgs( i+1, argv, "File name expected for option -t" )
          GenerateMAKE = True
+      elif OptionName == "-mt" or OptionName == "--module-type": ProjectType = CheckArgs( i+1, argv, "Project/module type expected for option -mt" )
       elif OptionName == "-cc" or OptionName == "--compiler-name" : CompilerName = CheckArgs( i+1, argv, "File name expected for option -cc" )
       elif OptionName == "-ar" or OptionName == "--ar-name"       : ArName = CheckArgs( i+1, argv, "File name expected for option -ar" )
       elif OptionName == "-ex" or OptionName == "--exclude-dir"   : ExcludeDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -ex" ) )
@@ -319,7 +324,15 @@ def ParseCommandLine(argv, BatchBuild):
    if ( not ProjectName and not RunBatchBuild ) and BatchBuild:
       print( "A valid project name must be specified with -pr option" )
       sys.exit( 255 )
-   if not ModuleName:  ModuleName = ProjectName + ".exe"
+   if not ModuleName:
+      if(ProjectType == "lib"):
+         ModuleName = ProjectName
+         ConfigPath2008 += ".Lib";
+         ConfigPath2010 += ".Lib";
+      else:
+         # exe
+         ModuleName = ProjectName + ".exe"
+
    if not MainCPPName: MainCPPName = os.path.join( SourceDir, ProjectName + ".cpp" )
    if not OutputFileName: OutputFileName = ProjectName
    if not ConfigPathQtTarget: ConfigPathQtTarget = ProjectName + ".pro"
