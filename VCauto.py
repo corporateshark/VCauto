@@ -40,6 +40,7 @@ ProjectType = "exe"
 # platforms configuration
 ConfigPath2008       = "ConfigVCAuto/Configuration"
 ConfigPath2010       = "ConfigVCAuto/ConfigurationX"
+ConfigPath2012       = "ConfigVCAuto/ConfigurationX_2012"
 ConfigPathQtTarget   = "" # will be generated as: ProjectName+".pro"
 ConfigPathMAKETarget = "makefile"
 ConfigPathMAKE       = os.path.join( sys.path[0], "Targets.list" )
@@ -94,6 +95,7 @@ PATTERN_SDK_PATH      = "<!LSDK_PATH!>"
 
 VisualStudio2008 = False
 VisualStudio2010 = False
+VisualStudio2012 = False
 
 # declare collections
 IncludeDirs  = []
@@ -247,9 +249,11 @@ def ParseCommandLine(argv, BatchBuild):
    global OutputFileName
    global VisualStudio2008
    global VisualStudio2010
+   global VisualStudio2012
    global SourceDir
    global ConfigPath2008
    global ConfigPath2010
+   global ConfigPath2012
    global IncludeDirs
    global ConfigPathMAKE
    global ConfigPathMAKETarget
@@ -291,10 +295,13 @@ def ParseCommandLine(argv, BatchBuild):
             VisualStudio2008 = True
          elif CompilerVer == "2010":
             VisualStudio2010 = True
+         elif CompilerVer == "2012":
+            VisualStudio2012 = True
       elif OptionName == "-i" or OptionName == "--include-dir": IncludeDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -i" ) )
       elif OptionName == "-c" or OptionName == "--MSVC-config":
          ConfigPath2008 = CheckArgs( i+1, argv, "File name expected for option -c" )
          ConfigPath2010 = ConfigPath2008 + "X";
+         ConfigPath2012 = ConfigPath2010 + "_2012";
       elif OptionName == "-m" or OptionName == "--makefile-config": ConfigPathMAKE = CheckArgs( i+1, argv, "File name expected for option -m" )
       elif OptionName == "-t" or OptionName == "--makefile-target": 
          ConfigPathMAKETarget = CheckArgs( i+1, argv, "File name expected for option -t" )
@@ -329,6 +336,7 @@ def ParseCommandLine(argv, BatchBuild):
          ModuleName = ProjectName
          ConfigPath2008 += ".Lib";
          ConfigPath2010 += ".Lib";
+         ConfigPath2012 += ".Lib";
       else:
          # exe
          ModuleName = ProjectName + ".exe"
@@ -398,6 +406,8 @@ def GenerateAll():
       if Verbose: print( "Reading MSVC config from:", ConfigPath2008 )
    if VisualStudio2010:
       if Verbose: print( "Reading MSVC config from:", ConfigPath2010 )
+   if VisualStudio2012:
+      if Verbose: print( "Reading MSVC config from:", ConfigPath2012 )
    if Verbose: print("")
 
    if GenerateVCPROJ and VisualStudio2008:
@@ -428,7 +438,7 @@ def GenerateAll():
       Out.write( "</VisualStudioProject>\n" )
       Out.close()
 
-   if GenerateVCPROJ and VisualStudio2010:
+   if GenerateVCPROJ and (VisualStudio2010 or VisualStudio2012):
       FileName = OutputFileName + ".vcxproj"
       if Verbose: print( "Generating: ", FileName )
       Out = open( FileName, 'wb' )
@@ -436,7 +446,11 @@ def GenerateAll():
       Out.close()
       Out = open( FileName, 'a' )
       # copy Configuration. template
-      Out.write( ReplacePatterns( open( ConfigPath2010 ).read() ) )
+      if(VisualStudio2010):
+         tmpl = open( ConfigPath2010 ).read()
+      else:
+         tmpl = open( ConfigPath2012 ).read()
+      Out.write( ReplacePatterns( tmpl ) )
       # source files       
       Out.write( MultiTab(1) + "<ItemGroup>\n" )
       for File in SourceFiles: Out.write( MultiTab(2) + "<ClCompile Include= \"" + ReplacePathSep(File) + "\" />\n" )
