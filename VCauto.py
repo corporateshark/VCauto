@@ -334,7 +334,7 @@ def ParseCommandLine(argv, BatchBuild):
       print( "A valid project name must be specified with -pr option" )
       sys.exit( 255 )
    if not ModuleName:
-      ModuleName = ProjectName
+      ModuleName = ProjectName + ".exe"
 
    if not MainCPPName: MainCPPName = os.path.join( SourceDir, ProjectName + ".cpp" )
    if not OutputFileName: OutputFileName = ProjectName
