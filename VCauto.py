@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.30
-# (02/01/2014)
+# Version 0.6.34
+# (29/08/2014)
 # (C) Kosarevsky Sergey, 2005-2014
 # support@linderdaum.com
 # Part of Linderdaum Engine
@@ -14,13 +14,14 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.32 (05/06/2014)"
+VCAutoVersion = "0.6.34 (29/08/2014)"
 
 Verbose = False
 
 GenerateVCPROJ  = False
 GenerateMAKE    = False
 GenerateQT      = False
+GenerateCB      = False
 GenerateAndroid = False
 RunBatchBuild   = ""
 
@@ -40,6 +41,7 @@ ConfigPath2010       = "ConfigVCAuto/ConfigurationX"
 ConfigPath2012       = "ConfigVCAuto/ConfigurationX_2012"
 ConfigPath2013       = "ConfigVCAuto/ConfigurationX_2013"
 ConfigPathQtTarget   = "" # will be generated as: ProjectName+".pro"
+ConfigPathCBTarget   = "" # will be generated as: ProjectName+".cbp", Code::Blocks
 ConfigPathMAKETarget = "makefile"
 ConfigPathMAKE       = os.path.join( sys.path[0], "Targets.list" )
 # We use gcc to avoid C/C++ file problems
@@ -53,6 +55,9 @@ IncludeDirsList      = "include_dirs"
 # Qt configuration
 DefaultQtEpilog      = ""
 ConfigQtEpilog       = DefaultQtEpilog
+
+# Code::Blocks configuration
+ConfigCBProlog       = ""
 
 # Android configuration
 ConfigPathAndroidTarget = "Android.mk"
@@ -123,6 +128,7 @@ def ClearAll():
    global ModuleName
    global MainCPPName
    global ConfigPathQtTarget
+   global ConfigPathCBTarget
    OutputFileName = ""
    ProjectName    = ""
    IncludeDirs  = []
@@ -136,6 +142,7 @@ def ClearAll():
    ModuleName   = ""
    MainCPPName  = ""
    ConfigPathQtTarget = ""
+   ConfigPathCBTarget = ""
 
 def IsHeaderFile(FileName):
    if FileName.endswith(".h"): return True
@@ -259,7 +266,9 @@ def ParseCommandLine(argv, BatchBuild):
    global ConfigPathMAKE
    global ConfigPathMAKETarget
    global ConfigPathQtTarget
+   global ConfigPathCBTarget
    global ConfigQtEpilog
+   global ConfigCBProlog
    global ConfigAndroidProlog
    global ConfigAndroidEpilog
    global ConfigPathAndroidTarget
@@ -274,6 +283,7 @@ def ParseCommandLine(argv, BatchBuild):
    global GenerateVCPROJ
    global GenerateMAKE
    global GenerateQT
+   global GenerateCB
    global GenerateAndroid
    global GeneratingCore
    global Verbose
@@ -321,6 +331,9 @@ def ParseCommandLine(argv, BatchBuild):
       elif OptionName == "-qt" or OptionName == "--qt-epilog"     : 
          ConfigQtEpilog = CheckArgs( i+1, argv, "Epilog file name expected for option -qt" )
          GenerateQT = True
+      elif OptionName == "-cbp" or OptionName == "--cbp-prologue" :
+         ConfigCBProlog = CheckArgs( i+1, argv, "Prologue file name expected for option -cbp" )
+         GenerateCB = True
       elif OptionName == "-andr1" or OptionName == "--android-prolog"     : ConfigAndroidProlog = CheckArgs( i+1, argv, "Epilog file name expected for option -andr1" )
       elif OptionName == "-andr2" or OptionName == "--android-epilog"     : ConfigAndroidEpilog = CheckArgs( i+1, argv, "Epilog file name expected for option -andr2" )
       elif OptionName == "-androut" or OptionName == "--android-out":
@@ -339,6 +352,7 @@ def ParseCommandLine(argv, BatchBuild):
    if not MainCPPName: MainCPPName = os.path.join( SourceDir, ProjectName + ".cpp" )
    if not OutputFileName: OutputFileName = ProjectName
    if not ConfigPathQtTarget: ConfigPathQtTarget = ProjectName + ".pro"
+   if not ConfigPathCBTarget: ConfigPathCBTarget = ProjectName + ".cbp"
 
 def ReplacePatterns(Text):
    Text = Text.replace( PATTERN_PROJECT_NAME,  ProjectName )
@@ -600,6 +614,26 @@ def GenerateAll():
       if len(ConfigQtEpilog) > 0:
          Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigQtEpilog ).read() ) ) )
 
+      Out.close()
+
+   # 9. Generate .cbp Code::Blocks project
+   if GenerateCB:
+      if Verbose: print( "Generating: ", ConfigPathCBTarget )
+      Out = open( ConfigPathCBTarget, 'w' )
+
+      if len(ConfigCBProlog) > 0:
+         Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigCBProlog ).read() ) ) )
+
+      for Index, Name in enumerate(ObjectFiles):
+         if SourceFiles[Index].endswith(".c"):
+            Out.write( "		<Unit filename=\"" + ReplacePathSepUNIX(SourceFiles[Index]) + "\">\n" )
+            Out.write( "			<Option compilerVar=\"CC\" />\n" )
+            Out.write( "		</Unit>\n" )
+         else:
+            Out.write( "		<Unit filename=\"" + ReplacePathSepUNIX(SourceFiles[Index]) + "\" />\n" )
+
+      Out.write( "	</Project>\n" )
+      Out.write( "</CodeBlocks_project_file>\n" )
       Out.close()
 
    # 9. Generate Android project
