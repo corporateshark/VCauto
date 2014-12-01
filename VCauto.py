@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.34
-# (29/08/2014)
+# Version 0.6.35
+# (01/12/2014)
 # (C) Kosarevsky Sergey, 2005-2014
 # support@linderdaum.com
 # Part of Linderdaum Engine
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.34 (29/08/2014)"
+VCAutoVersion = "0.6.35 (01/12/2014)"
 
 Verbose = False
 
@@ -210,25 +210,27 @@ def ShowHelp():
 Usage: VCauto.py [option <param>]
 
 Available options:
-   -s     - source directory
-   -o     - output .vcproj/.vcxproj file name for MSVC (without extension)
-   -ver   - target version of MSVC (2008 and 2010 are supported)
-   -i     - additional include directory
-   -c     - MSVC configuration file
-   -m     - makefile configuration file
-   -t     - ouput makefile name
-   -qt    - Qt .pro epilog file name
-   -andr1 - Android makefile prolog file name
-   -andr2 - Android makefile epilog file name
-   -k     - use Out/Obj for output instead of Out (this is used to compile engine's core)
-   -cc    - GNU compiler name
-   -ar    - GNU archiver name
-   -b     - run specified batch script (overrides all other command line options)
-   -ex    - exclude directory from project (can repeat)
-   -exf   - exclude file from project (can repeat)
-   -olist - temporary output list of object files (default: obj_files)
-   -ilist - temporary output list of include dirs (default: include_dirs)
-   -pr    - project name''' )
+   -s      - source directory
+   -o      - output .vcproj/.vcxproj file name for MSVC (without extension)
+   -ver    - target version of MSVC (2008 and 2010 are supported)
+   -i      - additional include directory
+   -c      - MSVC configuration file
+   -m      - makefile configuration file
+   -t      - ouput makefile name
+   -qt     - Qt .pro epilog file name
+   -andr1  - Android makefile prolog file name
+   -andr2  - Android makefile epilog file name
+   -k      - use Out/Obj for output instead of Out (this is used to compile engine's core)
+   -cc     - GNU compiler name
+   -ar     - GNU archiver name
+   -b      - run specified batch script (overrides all other command line options)
+   -plex   - list of platform-specific excludes
+   -exlist - list of excluded files
+   -ex     - exclude directory from project (can repeat)
+   -exf    - exclude file from project (can repeat)
+   -olist  - temporary output list of object files (default: obj_files)
+   -ilist  - temporary output list of include dirs (default: include_dirs)
+   -pr     - project name''' )
    sys.exit(0)
 
 def CheckArgs( i, argv, Message ):
@@ -250,7 +252,12 @@ def LoadPlatformsExcludes( ExcludesFileName ):
       elif Platform == "QT": ExcludeFilesQt.append( FileName )
       elif Platform == "MAKE": ExcludeFilesMake.append( FileName )
       elif Platform == "ANDROID": ExcludeFilesAndroid.append( FileName )
-  
+
+def LoadExcludesList( ExcludesFileName ):
+   global ExcludeFiles
+   for Line in open( ExcludesFileName ).readlines():
+      ExcludeFiles.append( str.strip( Line ) )
+
 def ParseCommandLine(argv, BatchBuild):
    global OutputFileName
    global VisualStudio2008
@@ -326,6 +333,7 @@ def ParseCommandLine(argv, BatchBuild):
       elif OptionName == "-pr" or OptionName == "--project-name"  : ProjectName = CheckArgs( i+1, argv, "Project name expected for option -pr" )
       elif OptionName == "-b" or OptionName == "--batch-build"    : RunBatchBuild = CheckArgs( i+1, argv, "Expected batch build file name for option -b" )
       elif OptionName == "-plex" or OptionName == "--platforms-excludes" : LoadPlatformsExcludes( CheckArgs( i+1, argv, "Expected excludes filename for option -plex" ) )
+      elif OptionName == "-exlist" or OptionName == "--exclude-list" : LoadExcludesList( CheckArgs( i+1, argv, "Expected excludes filename for option -exlist" ) )
       elif OptionName == "-olist" : ObjFilesList = CheckArgs( i+1, argv, "Expected file name for option -olist" )
       elif OptionName == "-ilist" : IncludeDirsList = CheckArgs( i+1, argv, "Expected file name for option -ilist" )
       elif OptionName == "-qt" or OptionName == "--qt-epilog"     : 
