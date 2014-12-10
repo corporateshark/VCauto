@@ -212,7 +212,7 @@ Usage: VCauto.py [option <param>]
 Available options:
    -s      - source directory
    -o      - output .vcproj/.vcxproj file name for MSVC (without extension)
-   -ver    - target version of MSVC (2008 and 2010 are supported)
+   -ver    - target version of MSVC (2008, 2010, 2012 and 2013 are supported)
    -i      - additional include directory
    -c      - MSVC configuration file
    -m      - makefile configuration file
