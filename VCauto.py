@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.35
-# (01/12/2014)
+# Version 0.6.36
+# (10/12/2014)
 # (C) Kosarevsky Sergey, 2005-2014
 # support@linderdaum.com
 # Part of Linderdaum Engine
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.35 (01/12/2014)"
+VCAutoVersion = "0.6.36 (10/12/2014)"
 
 Verbose = False
 
@@ -226,6 +226,7 @@ Available options:
    -b      - run specified batch script (overrides all other command line options)
    -plex   - list of platform-specific excludes
    -exlist - list of excluded files
+   -exdirlist - list of excluded directories
    -ex     - exclude directory from project (can repeat)
    -exf    - exclude file from project (can repeat)
    -olist  - temporary output list of object files (default: obj_files)
@@ -257,6 +258,11 @@ def LoadExcludesList( ExcludesFileName ):
    global ExcludeFiles
    for Line in open( ExcludesFileName ).readlines():
       ExcludeFiles.append( str.strip( Line ) )
+
+def LoadExcludeDirsList( ExcludeDirsFileName ):
+   global ExcludeDirs
+   for Line in open( ExcludeDirsFileName ).readlines():
+      ExcludeDirs.append( str.strip( Line ) )
 
 def ParseCommandLine(argv, BatchBuild):
    global OutputFileName
@@ -334,6 +340,7 @@ def ParseCommandLine(argv, BatchBuild):
       elif OptionName == "-b" or OptionName == "--batch-build"    : RunBatchBuild = CheckArgs( i+1, argv, "Expected batch build file name for option -b" )
       elif OptionName == "-plex" or OptionName == "--platforms-excludes" : LoadPlatformsExcludes( CheckArgs( i+1, argv, "Expected excludes filename for option -plex" ) )
       elif OptionName == "-exlist" or OptionName == "--exclude-list" : LoadExcludesList( CheckArgs( i+1, argv, "Expected excludes filename for option -exlist" ) )
+      elif OptionName == "-exdirlist" or OptionName == "--exclude-dirs-list" : LoadExcludeDirsList( CheckArgs( i+1, argv, "Expected excludes filename for option -exdirlist" ) )
       elif OptionName == "-olist" : ObjFilesList = CheckArgs( i+1, argv, "Expected file name for option -olist" )
       elif OptionName == "-ilist" : IncludeDirsList = CheckArgs( i+1, argv, "Expected file name for option -ilist" )
       elif OptionName == "-qt" or OptionName == "--qt-epilog"     : 
