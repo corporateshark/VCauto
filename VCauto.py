@@ -1,7 +1,7 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.37
+# Version 0.7.00
 # (15/01/2015)
 # (C) Kosarevsky Sergey, 2005-2015
 # support@linderdaum.com
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.37 (15/01/2015)"
+VCAutoVersion = "0.7.00 (15/01/2015)"
 
 Verbose = False
 
@@ -26,7 +26,7 @@ GenerateAndroid = False
 RunBatchBuild   = ""
 
 # default source dir
-SourceDir     = "Src"
+SourceDirs     = []
 
 # default SDK path
 SDKPath = os.path.join("..", "..")
@@ -36,7 +36,6 @@ OutputFileName           = "" # .vcproj or .vcxproj will be added automatically
 ProjectName              = "" # must be supplied in command line
 
 # platforms configuration
-ConfigPath2008       = "ConfigVCAuto/Configuration"
 ConfigPath2010       = "ConfigVCAuto/ConfigurationX"
 ConfigPath2012       = "ConfigVCAuto/ConfigurationX_2012"
 ConfigPath2013       = "ConfigVCAuto/ConfigurationX_2013"
@@ -96,7 +95,6 @@ PATTERN_SDK_PATH      = "<!LSDK_PATH!>"
 ###############################################
 ###############################################
 
-VisualStudio2008 = False
 VisualStudio2010 = False
 VisualStudio2012 = False
 VisualStudio2013 = False
@@ -120,6 +118,7 @@ def ClearAll():
    global IncludeDirs
    global IncludeFiles
    global IncludeFilesDirs
+   global SourceDirs
    global SourceFiles
    global SourceFilesDirs
    global ObjectFiles
@@ -131,13 +130,14 @@ def ClearAll():
    global ConfigPathCBTarget
    OutputFileName = ""
    ProjectName    = ""
+   SourceDirs   = []
    IncludeDirs  = []
    IncludeFiles = []
    IncludeFilesDirs = []
    SourceFiles  = []
    SourceFilesDirs  = []
    ObjectFiles  = []
-   ExcludeDirs  = [".svn"]
+   ExcludeDirs  = [".svn",".hg"]
    ExcludeFiles = []
    ModuleName   = ""
    MainCPPName  = ""
@@ -212,7 +212,7 @@ Usage: VCauto.py [option <param>]
 Available options:
    -s      - source directory
    -o      - output .vcproj/.vcxproj file name for MSVC (without extension)
-   -ver    - target version of MSVC (2008, 2010, 2012 and 2013 are supported)
+   -ver    - target version of MSVC (2010, 2012 and 2013 are supported)
    -i      - additional include directory
    -c      - MSVC configuration file
    -m      - makefile configuration file
@@ -266,12 +266,10 @@ def LoadExcludeDirsList( ExcludeDirsFileName ):
 
 def ParseCommandLine(argv, BatchBuild):
    global OutputFileName
-   global VisualStudio2008
    global VisualStudio2010
    global VisualStudio2012
    global VisualStudio2013
-   global SourceDir
-   global ConfigPath2008
+   global SourceDirs
    global ConfigPath2010
    global ConfigPath2012
    global ConfigPath2013
@@ -308,15 +306,13 @@ def ParseCommandLine(argv, BatchBuild):
       OptionName = CheckArgs( i, argv, "Option name expected" )
       OptionValue = CheckArgs( i+1, argv, "Option value expected" )
       if OptionName == "-v" or OptionName == "--verbose": Verbose = True
-      elif OptionName == "-s" or OptionName == "--source-dir": SourceDir = CheckArgs( i+1, argv, "Directory name expected for option -s" )
+      elif OptionName == "-s" or OptionName == "--source-dir": SourceDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -s" ) )
       elif OptionName == "-o" or OptionName == "--output-file-MSVC": OutputFileName = CheckArgs( i+1, argv, "File name expected for option -o" )
       elif OptionName == "-ver" or OptionName == "--MSVC-version":
          GenerateVCPROJ = True
          CompilerVer = CheckArgs( i+1, argv, "MSVC version expected for option -ver" )
 			# convert Compiler ver, if needed
-         if CompilerVer == "2008":
-            VisualStudio2008 = True
-         elif CompilerVer == "2010":
+         if CompilerVer == "2010":
             VisualStudio2010 = True
          elif CompilerVer == "2012":
             VisualStudio2012 = True
@@ -324,10 +320,10 @@ def ParseCommandLine(argv, BatchBuild):
             VisualStudio2013 = True
       elif OptionName == "-i" or OptionName == "--include-dir": IncludeDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -i" ) )
       elif OptionName == "-c" or OptionName == "--MSVC-config":
-         ConfigPath2008 = CheckArgs( i+1, argv, "File name expected for option -c" )
-         ConfigPath2010 = ConfigPath2008 + "X";
-         ConfigPath2012 = ConfigPath2008 + "X_2012";
-         ConfigPath2013 = ConfigPath2008 + "X_2013";
+         ConfigPath = CheckArgs( i+1, argv, "File name expected for option -c" )
+         ConfigPath2010 = ConfigPath + "X";
+         ConfigPath2012 = ConfigPath + "X_2012";
+         ConfigPath2013 = ConfigPath + "X_2013";
       elif OptionName == "-m" or OptionName == "--makefile-config": ConfigPathMAKE = CheckArgs( i+1, argv, "File name expected for option -m" )
       elif OptionName == "-t" or OptionName == "--makefile-target": 
          ConfigPathMAKETarget = CheckArgs( i+1, argv, "File name expected for option -t" )
@@ -364,7 +360,8 @@ def ParseCommandLine(argv, BatchBuild):
    if not ModuleName:
       ModuleName = ProjectName + ".exe"
 
-   if not MainCPPName: MainCPPName = os.path.join( SourceDir, ProjectName + ".cpp" )
+   if len(SourceDirs) == 0: SourceDirs.append( "Src" )
+   if not MainCPPName: MainCPPName = os.path.join( SourceDirs[0], ProjectName + ".cpp" )
    if not OutputFileName: OutputFileName = ProjectName
    if not ConfigPathQtTarget: ConfigPathQtTarget = ProjectName + ".pro"
    if not ConfigPathCBTarget: ConfigPathCBTarget = ProjectName + ".cbp"
@@ -376,24 +373,6 @@ def ReplacePatterns(Text):
    Text = Text.replace( PATTERN_MAIN_CPP_NAME, MainCPPName )
    Text = Text.replace( PATTERN_SDK_PATH,      SDKPath )
    return Text
-
-def GenVC2008(NestLevel, Out, Path):
-    for Item in os.listdir( Path ):
-       ItemPath = os.path.join(Path, Item)
-       if os.path.isdir(ItemPath): 
-          if Item in ExcludeDirs: continue
-          Out.write( MultiTab(NestLevel  ) + "<Filter\n" )
-          Out.write( MultiTab(NestLevel+1) + "Name = \"" + Item + "\"\n" )
-          Out.write( MultiTab(NestLevel+1) + "Filter = \"\">\n" )
-          GenVC2008( NestLevel+1, Out, os.path.join( Path, Item ) )
-          Out.write( MultiTab(NestLevel) + "</Filter>\n" )
-       elif os.path.isfile(ItemPath): 
-          if Item in ExcludeFiles: continue
-          if Item in ExcludeFilesVS: continue
-          OmitDot = Item.find("..") != -1;
-          Out.write( MultiTab(NestLevel  ) + "<File\n" )
-          Out.write( MultiTab(NestLevel+1) + "RelativePath=" + "\"" + ( "" if OmitDot else ".\\" ) + os.path.join( Path, Item ) + "\">\n" )
-          Out.write( MultiTab(NestLevel  ) + "</File>\n" )
 
 # prepare directory structure
 def Scan(Path):
@@ -418,16 +397,15 @@ def Scan(Path):
 def GenerateAll():
    if Verbose: print( "Project name:", ProjectName)
 
-   IncludeDirs.append( SourceDir )
+   for SourceDir in SourceDirs:
+      IncludeDirs.append( SourceDir )
 
-   # create VC config
-   if Verbose: print( "Reading directory tree from: ", SourceDir )
+      # create VC config
+      if Verbose: print( "Reading directory tree from: ", SourceDir )
 
-   Scan( SourceDir )
+      Scan( SourceDir )
 
    if Verbose: print( "Reading make config from:", ConfigPathMAKE )
-   if VisualStudio2008:
-      if Verbose: print( "Reading MSVC config from:", ConfigPath2008 )
    if VisualStudio2010:
       if Verbose: print( "Reading MSVC config from:", ConfigPath2010 )
    if VisualStudio2012:
@@ -435,34 +413,6 @@ def GenerateAll():
    if VisualStudio2013:
       if Verbose: print( "Reading MSVC config from:", ConfigPath2013 )
    if Verbose: print("")
-
-   if GenerateVCPROJ and VisualStudio2008:
-      FileName = OutputFileName + ".vcproj"
-      if Verbose: print( "Generating: ", FileName )
-      Out = open( FileName, 'wb' )
-      Out.close()
-      Out = open( FileName, 'a' )
-      Out.write( "<?xml version=\"1.0\" encoding=\"windows-1251\"?>\n" )
-      Out.write( "<VisualStudioProject\n" )
-      Out.write( MultiTab(1) + "ProjectType=\"Visual C++\"\n" )
-      Out.write( MultiTab(1) + "Version=\"9,00\"\n" )
-      # copy Configuration. template
-      RealConf2008 = ConfigPath2008
-   #   if(not (platform.system() == "Windows")):
-   #      RealConf2008 = ConfigPath2008[0:len(ConfigPath2008)-1]
-
-      Out.write( ReplacePatterns( open( RealConf2008 ).read() ) )
-      # write files header
-      Out.write( "\n" + MultiTab(1) + "<Files>\n" )
-      Out.write( MultiTab(2) + "<Filter\n" )
-      Out.write( MultiTab(3) + "Name=\"Source Files\"\n" )
-      Out.write( MultiTab(3) + "UniqueIdentifier=\"{" + str.upper(str(uuid.uuid5(uuid.NAMESPACE_URL, ProjectName))) + "}\">\n" )
-      # generate VC2008 output
-      GenVC2008( 3, Out, SourceDir )
-      Out.write( MultiTab(2) + "</Filter>\n" )
-      Out.write( MultiTab(1) + "</Files>\n" )
-      Out.write( "</VisualStudioProject>\n" )
-      Out.close()
 
    if GenerateVCPROJ and (VisualStudio2010 or VisualStudio2012 or VisualStudio2013):
       FileName = OutputFileName + ".vcxproj"
