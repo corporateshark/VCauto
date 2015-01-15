@@ -1,7 +1,7 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.7.00
+# Version 0.7.01
 # (15/01/2015)
 # (C) Kosarevsky Sergey, 2005-2015
 # support@linderdaum.com
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.7.00 (15/01/2015)"
+VCAutoVersion = "0.7.01 (15/01/2015)"
 
 Verbose = False
 
@@ -108,6 +108,7 @@ SourceFilesDirs  = []
 ObjectFiles  = []
 ExcludeDirs  = [".svn"]
 ExcludeFiles = []
+SourcesList  = []
 
 # hack
 GeneratingCore = False
@@ -231,6 +232,7 @@ Available options:
    -exf    - exclude file from project (can repeat)
    -olist  - temporary output list of object files (default: obj_files)
    -ilist  - temporary output list of include dirs (default: include_dirs)
+   -slist  - list of additinal source files to compile
    -pr     - project name''' )
    sys.exit(0)
 
@@ -263,6 +265,11 @@ def LoadExcludeDirsList( ExcludeDirsFileName ):
    global ExcludeDirs
    for Line in open( ExcludeDirsFileName ).readlines():
       ExcludeDirs.append( str.strip( Line ) )
+
+def LoadSourcesList( SourcesFileName ):
+   global SourcesList
+   for Line in open( SourcesFileName ).readlines():
+      SourcesList.append( str.strip( Line ) )
 
 def ParseCommandLine(argv, BatchBuild):
    global OutputFileName
@@ -301,6 +308,7 @@ def ParseCommandLine(argv, BatchBuild):
    global RunBatchBuild
    global ObjFilesList
    global IncludeDirsList
+   global SourcesList
    argc = len(argv)
    for i in range(1, argc, 2):
       OptionName = CheckArgs( i, argv, "Option name expected" )
@@ -339,6 +347,7 @@ def ParseCommandLine(argv, BatchBuild):
       elif OptionName == "-exdirlist" or OptionName == "--exclude-dirs-list" : LoadExcludeDirsList( CheckArgs( i+1, argv, "Expected excludes filename for option -exdirlist" ) )
       elif OptionName == "-olist" : ObjFilesList = CheckArgs( i+1, argv, "Expected file name for option -olist" )
       elif OptionName == "-ilist" : IncludeDirsList = CheckArgs( i+1, argv, "Expected file name for option -ilist" )
+      elif OptionName == "-slist" : LoadSourcesList( CheckArgs( i+1, argv, "Expected file name for option -slist" ) )
       elif OptionName == "-qt" or OptionName == "--qt-epilog"     : 
          ConfigQtEpilog = CheckArgs( i+1, argv, "Epilog file name expected for option -qt" )
          GenerateQT = True
@@ -404,6 +413,11 @@ def GenerateAll():
       if Verbose: print( "Reading directory tree from: ", SourceDir )
 
       Scan( SourceDir )
+
+   for SourceFile in SourcesList:
+      SourceFiles.append( SourceFile )
+      SourceFilesDirs.append( os.path.dirname( SourceFile ) )
+      ObjectFiles.append( MakeObjectFile( os.path.basename( SourceFile ) ) )
 
    if Verbose: print( "Reading make config from:", ConfigPathMAKE )
    if VisualStudio2010:
