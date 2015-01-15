@@ -1,9 +1,9 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.6.36
-# (10/12/2014)
-# (C) Kosarevsky Sergey, 2005-2014
+# Version 0.6.37
+# (15/01/2015)
+# (C) Kosarevsky Sergey, 2005-2015
 # support@linderdaum.com
 # Part of Linderdaum Engine
 # http://www.linderdaum.com
@@ -14,7 +14,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.6.36 (10/12/2014)"
+VCAutoVersion = "0.6.37 (15/01/2015)"
 
 Verbose = False
 
@@ -308,7 +308,7 @@ def ParseCommandLine(argv, BatchBuild):
       OptionName = CheckArgs( i, argv, "Option name expected" )
       OptionValue = CheckArgs( i+1, argv, "Option value expected" )
       if OptionName == "-v" or OptionName == "--verbose": Verbose = True
-      if OptionName == "-s" or OptionName == "--source-dir": SourceDir = CheckArgs( i+1, argv, "Directory name expected for option -s" )
+      elif OptionName == "-s" or OptionName == "--source-dir": SourceDir = CheckArgs( i+1, argv, "Directory name expected for option -s" )
       elif OptionName == "-o" or OptionName == "--output-file-MSVC": OutputFileName = CheckArgs( i+1, argv, "File name expected for option -o" )
       elif OptionName == "-ver" or OptionName == "--MSVC-version":
          GenerateVCPROJ = True
