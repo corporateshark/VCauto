@@ -91,6 +91,7 @@ DefaultAndroidProlog    = ""
 DefaultAndroidEpilog    = ""
 ConfigAndroidProlog     = DefaultAndroidProlog
 ConfigAndroidEpilog     = DefaultAndroidEpilog
+AndroidPathPrefix       = "../"
 
 # list of excluded files for different targets
 ExcludeFilesVS        = []
@@ -320,6 +321,7 @@ def ParseCommandLine(argv, BatchBuild):
    global ConfigAndroidProlog
    global ConfigAndroidEpilog
    global ConfigPathAndroidTarget
+   global AndroidPathPrefix
    global CompilerName
    global ArNam
    global ExcludeDirs
@@ -389,7 +391,8 @@ def ParseCommandLine(argv, BatchBuild):
       elif OptionName == "-androut" or OptionName == "--android-out":
          ConfigPathAndroidTarget = CheckArgs( i+1, argv, "Output .mk file name expected for option -androut" )
          GenerateAndroid = True
-      elif OptionName == "-k"  or OptionName == "--core"          :
+      elif OptionName == "-andrprefix": AndroidPathPrefix = CheckArgs( i+1, argv, "Expected Android path prefix" )
+      elif OptionName == "-k"  or OptionName == "--core":
          DEFAULT_OBJ_DIR = CORE_OBJ_DIR
          GeneratingCore = True
       else: CheckArgs( 0, [], "Invalid option: " + OptionName )
@@ -661,7 +664,7 @@ def GenerateAll():
          # 11. Include directories
          Out.write( "LOCAL_C_INCLUDES += \\\n" )
 
-         Prefix = "../";
+         Prefix = AndroidPathPrefix
 
          if GeneratingCore: Prefix = "../../";
 
@@ -675,7 +678,7 @@ def GenerateAll():
             if Name in ExcludeFilesAndroid: 
                if Verbose: print( "   Android excluded:", Name )
                continue
-            Out.write( MultiTab(1) + Prefix + ReplacePathSepUNIX(Name) + " \\\n" );
+            Out.write( MultiTab(1) + AndroidPathPrefix + ReplacePathSepUNIX(Name) + " \\\n" );
 
          Out.write( "\n" )
 
