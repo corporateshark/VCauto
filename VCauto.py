@@ -52,6 +52,8 @@ GenerateCB      = False
 GenerateAndroid = False
 RunBatchBuild   = ""
 
+PreserveDirectoryStructure = False
+
 # default source dir
 SourceDirs     = []
 
@@ -341,11 +343,13 @@ def ParseCommandLine(argv, BatchBuild):
    global ObjFilesList
    global IncludeDirsList
    global SourcesList
+   global PreserveDirectoryStructure
    argc = len(argv)
    for i in range(1, argc, 2):
       OptionName = CheckArgs( i, argv, "Option name expected" )
       OptionValue = CheckArgs( i+1, argv, "Option value expected" )
       if OptionName == "-v" or OptionName == "--verbose": Verbose = True
+      if OptionName == "--preserve-dirs": PreserveDirectoryStructure = True
       elif OptionName == "-s" or OptionName == "--source-dir": SourceDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -s" ) )
       elif OptionName == "-o" or OptionName == "--output-file-MSVC": OutputFileName = CheckArgs( i+1, argv, "File name expected for option -o" )
       elif OptionName == "-ver" or OptionName == "--MSVC-version":
@@ -434,7 +438,7 @@ def Scan(Path):
           elif IsSourceFile( ItemPath ):
              SourceFiles.append( ItemPath )
              SourceFilesDirs.append( Path )
-             ObjectFiles.append( MakeObjectFile( Item ) )
+             ObjectFiles.append( MakeObjectFile( ItemPath if PreserveDirectoryStructure else Item ) )
 
 def GenerateAll():
    if Verbose: print( "Project name:", ProjectName)
@@ -450,7 +454,7 @@ def GenerateAll():
    for SourceFile in SourcesList:
       SourceFiles.append( SourceFile )
       SourceFilesDirs.append( os.path.dirname( SourceFile ) )
-      ObjectFiles.append( MakeObjectFile( os.path.basename( SourceFile ) ) )
+      ObjectFiles.append( MakeObjectFile( SourceFile if PreserveDirectoryStructure else os.path.basename( SourceFile ) ) )
 
    if Verbose: print( "Reading make config from:", ConfigPathMAKE )
    if VisualStudio2010:
@@ -599,10 +603,16 @@ def GenerateAll():
 
       # 5. Targets > take them from Targets.list
       Out.write( "\n# User-defined targets\n\n" )
-      Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigPathMAKE ).read() ) ) )
+      Out.write( ReplacePatterns( open( ConfigPathMAKE ).read() ) )
 
       # 6. End of makefile
       Out.write( "\n\n# End of Makefile\n" )
+
+      # 7. Make dirs for objects files
+      for Dir in SourceFilesDirs:
+         DirName = ObjDir + "/" + Dir
+         if not os.path.exists( DirName ):
+            os.makedirs( DirName )
 
    # 7. Generate .pro Qt-project
    if GenerateQT:
