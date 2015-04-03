@@ -1,7 +1,7 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.7.01
+# Version 0.7.02
 # Copyright (C) 2005-2015 Sergey Kosarevsky (sk@linderdaum.com)
 # Copyright (C) 2005-2015 Viktor Latypov (vl@linderdaum.com)
 # Part of Linderdaum Engine http://www.linderdaum.com
@@ -41,7 +41,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.7.01 (15/01/2015)"
+VCAutoVersion = "0.7.02 (03/04/2015)"
 
 Verbose = False
 
@@ -68,6 +68,7 @@ ProjectName              = "" # must be supplied in command line
 ConfigPath2010       = "ConfigVCAuto/ConfigurationX"
 ConfigPath2012       = "ConfigVCAuto/ConfigurationX_2012"
 ConfigPath2013       = "ConfigVCAuto/ConfigurationX_2013"
+ConfigPath2015       = "ConfigVCAuto/ConfigurationX_2015"
 ConfigPathQtTarget   = "" # will be generated as: ProjectName+".pro"
 ConfigPathCBTarget   = "" # will be generated as: ProjectName+".cbp", Code::Blocks
 ConfigPathMAKETarget = "makefile"
@@ -128,6 +129,7 @@ PATTERN_SDK_PATH      = "<!LSDK_PATH!>"
 VisualStudio2010 = False
 VisualStudio2012 = False
 VisualStudio2013 = False
+VisualStudio2015 = False
 
 # declare collections
 IncludeDirs  = []
@@ -246,7 +248,7 @@ Usage: VCauto.py [option <param>]
 Available options:
    -s      - source directory
    -o      - output .vcproj/.vcxproj file name for MSVC (without extension)
-   -ver    - target version of MSVC (2010, 2012 and 2013 are supported)
+   -ver    - target version of MSVC (2010, 2012, 2013 and 2015 are supported)
    -i      - additional include directory
    -c      - MSVC configuration file
    -m      - makefile configuration file
@@ -309,10 +311,12 @@ def ParseCommandLine(argv, BatchBuild):
    global VisualStudio2010
    global VisualStudio2012
    global VisualStudio2013
+   global VisualStudio2015
    global SourceDirs
    global ConfigPath2010
    global ConfigPath2012
    global ConfigPath2013
+   global ConfigPath2015
    global IncludeDirs
    global ConfigPathMAKE
    global ConfigPathMAKETarget
@@ -362,12 +366,15 @@ def ParseCommandLine(argv, BatchBuild):
             VisualStudio2012 = True
          elif CompilerVer == "2013":
             VisualStudio2013 = True
+         elif CompilerVer == "2015":
+            VisualStudio2015 = True
       elif OptionName == "-i" or OptionName == "--include-dir": IncludeDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -i" ) )
       elif OptionName == "-c" or OptionName == "--MSVC-config":
          ConfigPath = CheckArgs( i+1, argv, "File name expected for option -c" )
          ConfigPath2010 = ConfigPath + "X";
          ConfigPath2012 = ConfigPath + "X_2012";
          ConfigPath2013 = ConfigPath + "X_2013";
+         ConfigPath2015 = ConfigPath + "X_2015";
       elif OptionName == "-m" or OptionName == "--makefile-config": ConfigPathMAKE = CheckArgs( i+1, argv, "File name expected for option -m" )
       elif OptionName == "-t" or OptionName == "--makefile-target": 
          ConfigPathMAKETarget = CheckArgs( i+1, argv, "File name expected for option -t" )
@@ -458,14 +465,16 @@ def GenerateAll():
 
    if Verbose: print( "Reading make config from:", ConfigPathMAKE )
    if VisualStudio2010:
-      if Verbose: print( "Reading MSVC config from:", ConfigPath2010 )
+      if Verbose: print( "Reading MSVC 2010 config from:", ConfigPath2010 )
    if VisualStudio2012:
-      if Verbose: print( "Reading MSVC config from:", ConfigPath2012 )
+      if Verbose: print( "Reading MSVC 2012 config from:", ConfigPath2012 )
    if VisualStudio2013:
-      if Verbose: print( "Reading MSVC config from:", ConfigPath2013 )
+      if Verbose: print( "Reading MSVC 2013 config from:", ConfigPath2013 )
+   if VisualStudio2015:
+      if Verbose: print( "Reading MSVC 2015 config from:", ConfigPath2015 )
    if Verbose: print("")
 
-   if GenerateVCPROJ and (VisualStudio2010 or VisualStudio2012 or VisualStudio2013):
+   if GenerateVCPROJ and (VisualStudio2010 or VisualStudio2012 or VisualStudio2013 or VisualStudio2015):
       FileName = OutputFileName + ".vcxproj"
       if Verbose: print( "Generating: ", FileName )
       Out = open( FileName, 'wb' )
@@ -477,8 +486,10 @@ def GenerateAll():
          tmpl = open( ConfigPath2010 ).read()
       elif VisualStudio2012:
          tmpl = open( ConfigPath2012 ).read()
-      else:
+      elif VisualStudio2013:
          tmpl = open( ConfigPath2013 ).read()
+      else:
+         tmpl = open( ConfigPath2015 ).read()
       Out.write( ReplacePatterns( tmpl ) )
       # source files       
       Out.write( MultiTab(1) + "<ItemGroup>\n" )
