@@ -614,7 +614,7 @@ def GenerateAll():
 
       # 5. Targets > take them from Targets.list
       Out.write( "\n# User-defined targets\n\n" )
-      Out.write( ReplacePatterns( open( ConfigPathMAKE ).read() ) )
+      Out.write( ReplacePathSepUNIX( ReplacePatterns( open( ConfigPathMAKE ).read() ) ) )
 
       # 6. End of makefile
       Out.write( "\n\n# End of Makefile\n" )
