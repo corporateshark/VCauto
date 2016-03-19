@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.7.02
-# Copyright (C) 2005-2015 Sergey Kosarevsky (sk@linderdaum.com)
+# Version 0.7.03
+# Copyright (C) 2005-2016 Sergey Kosarevsky (sk@linderdaum.com)
 # Copyright (C) 2005-2015 Viktor Latypov (vl@linderdaum.com)
 # Part of Linderdaum Engine http://www.linderdaum.com
 # support@linderdaum.com
@@ -41,7 +41,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.7.02 (03/04/2015)"
+VCAutoVersion = "0.7.03 (19/03/2016)"
 
 Verbose = False
 
@@ -65,7 +65,6 @@ OutputFileName           = "" # .vcproj or .vcxproj will be added automatically
 ProjectName              = "" # must be supplied in command line
 
 # platforms configuration
-ConfigPath2010       = "ConfigVCAuto/ConfigurationX"
 ConfigPath2012       = "ConfigVCAuto/ConfigurationX_2012"
 ConfigPath2013       = "ConfigVCAuto/ConfigurationX_2013"
 ConfigPath2015       = "ConfigVCAuto/ConfigurationX_2015"
@@ -126,7 +125,6 @@ PATTERN_SDK_PATH      = "<!LSDK_PATH!>"
 ###############################################
 ###############################################
 
-VisualStudio2010 = False
 VisualStudio2012 = False
 VisualStudio2013 = False
 VisualStudio2015 = False
@@ -248,7 +246,7 @@ Usage: VCauto.py [option <param>]
 Available options:
    -s      - source directory
    -o      - output .vcproj/.vcxproj file name for MSVC (without extension)
-   -ver    - target version of MSVC (2010, 2012, 2013 and 2015 are supported)
+   -ver    - target version of MSVC (2012, 2013 and 2015 are supported)
    -i      - additional include directory
    -c      - MSVC configuration file
    -m      - makefile configuration file
@@ -308,12 +306,10 @@ def LoadSourcesList( SourcesFileName ):
 
 def ParseCommandLine(argv, BatchBuild):
    global OutputFileName
-   global VisualStudio2010
    global VisualStudio2012
    global VisualStudio2013
    global VisualStudio2015
    global SourceDirs
-   global ConfigPath2010
    global ConfigPath2012
    global ConfigPath2013
    global ConfigPath2015
@@ -360,9 +356,7 @@ def ParseCommandLine(argv, BatchBuild):
          GenerateVCPROJ = True
          CompilerVer = CheckArgs( i+1, argv, "MSVC version expected for option -ver" )
 			# convert Compiler ver, if needed
-         if CompilerVer == "2010":
-            VisualStudio2010 = True
-         elif CompilerVer == "2012":
+         if CompilerVer == "2012":
             VisualStudio2012 = True
          elif CompilerVer == "2013":
             VisualStudio2013 = True
@@ -371,7 +365,6 @@ def ParseCommandLine(argv, BatchBuild):
       elif OptionName == "-i" or OptionName == "--include-dir": IncludeDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -i" ) )
       elif OptionName == "-c" or OptionName == "--MSVC-config":
          ConfigPath = CheckArgs( i+1, argv, "File name expected for option -c" )
-         ConfigPath2010 = ConfigPath + "X";
          ConfigPath2012 = ConfigPath + "X_2012";
          ConfigPath2013 = ConfigPath + "X_2013";
          ConfigPath2015 = ConfigPath + "X_2015";
@@ -464,8 +457,6 @@ def GenerateAll():
       ObjectFiles.append( MakeObjectFile( SourceFile if PreserveDirectoryStructure else os.path.basename( SourceFile ) ) )
 
    if Verbose: print( "Reading make config from:", ConfigPathMAKE )
-   if VisualStudio2010:
-      if Verbose: print( "Reading MSVC 2010 config from:", ConfigPath2010 )
    if VisualStudio2012:
       if Verbose: print( "Reading MSVC 2012 config from:", ConfigPath2012 )
    if VisualStudio2013:
@@ -474,7 +465,7 @@ def GenerateAll():
       if Verbose: print( "Reading MSVC 2015 config from:", ConfigPath2015 )
    if Verbose: print("")
 
-   if GenerateVCPROJ and (VisualStudio2010 or VisualStudio2012 or VisualStudio2013 or VisualStudio2015):
+   if GenerateVCPROJ and (VisualStudio2012 or VisualStudio2013 or VisualStudio2015):
       FileName = OutputFileName + ".vcxproj"
       if Verbose: print( "Generating: ", FileName )
       Out = open( FileName, 'wb' )
@@ -482,9 +473,7 @@ def GenerateAll():
       Out.close()
       Out = open( FileName, 'a' )
       # copy Configuration. template
-      if VisualStudio2010:
-         tmpl = open( ConfigPath2010 ).read()
-      elif VisualStudio2012:
+      if VisualStudio2012:
          tmpl = open( ConfigPath2012 ).read()
       elif VisualStudio2013:
          tmpl = open( ConfigPath2013 ).read()
