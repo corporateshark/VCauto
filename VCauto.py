@@ -1,7 +1,7 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.7.03
+# Version 0.7.04
 # Copyright (C) 2005-2016 Sergey Kosarevsky (sk@linderdaum.com)
 # Copyright (C) 2005-2015 Viktor Latypov (vl@linderdaum.com)
 # Part of Linderdaum Engine http://www.linderdaum.com
@@ -41,7 +41,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.7.03 (19/03/2016)"
+VCAutoVersion = "0.7.04 (10/04/2016)"
 
 Verbose = False
 
@@ -100,6 +100,9 @@ ExcludeFilesVS        = []
 ExcludeFilesQt        = []
 ExcludeFilesMake      = []
 ExcludeFilesAndroid   = []
+
+# Support for Unity Builds: if this directory is not Empty, only its contents are marked as clCompile in vcxproj.filters
+UnityBuildDirName = ""
 
 ##############################
 
@@ -266,6 +269,7 @@ Available options:
    -olist  - temporary output list of object files (default: obj_files)
    -ilist  - temporary output list of include dirs (default: include_dirs)
    -slist  - list of additinal source files to compile
+   -ubdir  - path of UnityBuild directory
    -pr     - project name''' )
    sys.exit(0)
 
@@ -344,6 +348,7 @@ def ParseCommandLine(argv, BatchBuild):
    global IncludeDirsList
    global SourcesList
    global PreserveDirectoryStructure
+   global UnityBuildDirName
    argc = len(argv)
    for i in range(1, argc, 2):
       OptionName = CheckArgs( i, argv, "Option name expected" )
@@ -378,6 +383,7 @@ def ParseCommandLine(argv, BatchBuild):
       elif OptionName == "-exf" or OptionName == "--exclude-file" : ExcludeFiles.append( CheckArgs( i+1, argv, "File name expected for option -exf" ) )
       elif OptionName == "-pr" or OptionName == "--project-name"  : ProjectName = CheckArgs( i+1, argv, "Project name expected for option -pr" )
       elif OptionName == "-b" or OptionName == "--batch-build"    : RunBatchBuild = CheckArgs( i+1, argv, "Expected batch build file name for option -b" )
+      elif OptionName == "-ubdir" or OptionName == "--unity-build-dir"   : UnityBuildDirName = CheckArgs( i+1, argv, "Expected directory name for option -ubdir" )
       elif OptionName == "-plex" or OptionName == "--platforms-excludes" : LoadPlatformsExcludes( CheckArgs( i+1, argv, "Expected excludes filename for option -plex" ) )
       elif OptionName == "-exlist" or OptionName == "--exclude-list" : LoadExcludesList( CheckArgs( i+1, argv, "Expected excludes filename for option -exlist" ) )
       elif OptionName == "-exdirlist" or OptionName == "--exclude-dirs-list" : LoadExcludeDirsList( CheckArgs( i+1, argv, "Expected excludes filename for option -exdirlist" ) )
@@ -480,9 +486,14 @@ def GenerateAll():
       else:
          tmpl = open( ConfigPath2015 ).read()
       Out.write( ReplacePatterns( tmpl ) )
+
+      DontUseBuildDir = UnityBuildDirName.isspace()
+
       # source files       
       Out.write( MultiTab(1) + "<ItemGroup>\n" )
-      for File in SourceFiles: Out.write( MultiTab(2) + "<ClCompile Include= \"" + ReplacePathSep(File) + "\" />\n" )
+      for File in SourceFiles:
+         Prefix = ("ClCompile") if ( DontUseBuildDir or (File.find(UnityBuildDirName) >= 0)) else "ClInclude"
+         Out.write( MultiTab(2) + "<"+Prefix+" Include= \"" + ReplacePathSep(File) + "\" />\n" )
       Out.write( MultiTab(1) + "</ItemGroup>\n" )
       # header files
       Out.write( MultiTab(1) + "<ItemGroup>\n" )
@@ -511,9 +522,10 @@ def GenerateAll():
       OutF.write( MultiTab(1) + "<ItemGroup>\n" )
       for Index, File in enumerate(SourceFiles):
          if File in ExcludeFilesVS: continue
-         OutF.write( MultiTab(2) + "<ClCompile Include=\"" + File + "\">\n" )
+         Prefix = ("ClCompile") if ( DontUseBuildDir or (File.find(UnityBuildDirName) >= 0) ) else "ClInclude"
+         OutF.write( MultiTab(2) + "<"+Prefix+" Include=\"" + File + "\">\n" )
          OutF.write( MultiTab(3) + "<Filter>" + SourceFilesDirs[Index] + "</Filter>\n" )
-         OutF.write( MultiTab(2) + "</ClCompile>\n" )
+         OutF.write( MultiTab(2) + "</"+Prefix+">\n" )
       OutF.write( MultiTab(1) + "</ItemGroup>\n" )
 
       OutF.write( MultiTab(1) + "<ItemGroup>\n" )
