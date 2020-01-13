@@ -1,7 +1,7 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.7.05
+# Version 0.7.10
 # Copyright (C) 2005-2020 Sergey Kosarevsky (sk@linderdaum.com)
 # Copyright (C) 2005-2016 Viktor Latypov (vl@linderdaum.com)
 # Part of Linderdaum Engine http://www.linderdaum.com
@@ -42,11 +42,10 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.7.05 (13/01/2020)"
+VCAutoVersion = "0.7.10 (13/01/2020)"
 
 Verbose = False
 
-GenerateVCPROJ  = False
 GenerateMAKE    = False
 GenerateQT      = False
 GenerateCB      = False
@@ -61,14 +60,10 @@ SourceDirs     = []
 # default SDK path
 SDKPath = os.path.join("..", "..")
 
-# MSVC compiler configuration
-OutputFileName           = "" # .vcproj or .vcxproj will be added automatically
+# project properties
 ProjectName              = "" # must be supplied in command line
 
 # platforms configuration
-ConfigPath2012       = "ConfigVCAuto/ConfigurationX_2012"
-ConfigPath2013       = "ConfigVCAuto/ConfigurationX_2013"
-ConfigPath2015       = "ConfigVCAuto/ConfigurationX_2015"
 ConfigPathQtTarget   = "" # will be generated as: ProjectName+".pro"
 ConfigPathCBTarget   = "" # will be generated as: ProjectName+".cbp", Code::Blocks
 ConfigPathMAKETarget = "makefile"
@@ -97,7 +92,6 @@ ConfigAndroidEpilog     = DefaultAndroidEpilog
 AndroidPathPrefix       = "../"
 
 # list of excluded files for different targets
-ExcludeFilesVS        = []
 ExcludeFilesQt        = []
 ExcludeFilesMake      = []
 ExcludeFilesAndroid   = []
@@ -148,7 +142,6 @@ SourcesList  = []
 GeneratingCore = False
 
 def ClearAll():
-   global OutputFileName
    global ProjectName
    global IncludeDirs
    global IncludeFiles
@@ -163,7 +156,6 @@ def ClearAll():
    global MainCPPName
    global ConfigPathQtTarget
    global ConfigPathCBTarget
-   OutputFileName = ""
    ProjectName    = ""
    SourceDirs   = []
    IncludeDirs  = []
@@ -249,10 +241,7 @@ Usage: VCauto.py [option <param>]
 
 Available options:
    -s      - source directory
-   -o      - output .vcproj/.vcxproj file name for MSVC (without extension)
-   -ver    - target version of MSVC (2012, 2013 and 2015 are supported)
    -i      - additional include directory
-   -c      - MSVC configuration file
    -m      - makefile configuration file
    -t      - ouput makefile name
    -qt     - Qt .pro epilog file name
@@ -281,7 +270,6 @@ def CheckArgs( i, argv, Message ):
    return argv[i]
 
 def LoadPlatformsExcludes( ExcludesFileName ):
-   global ExcludeFilesVS
    global ExcludeFilesQt
    global ExcludeFilesMake
    global ExcludeFilesAndroid
@@ -290,8 +278,7 @@ def LoadPlatformsExcludes( ExcludesFileName ):
       FileName = ReplacePathSep( str.strip( Line[  Line.find(':')+1:: ] ) )
       FileName = ReplacePathSepUNIX( FileName )
       print( "'"+Platform+"'   '"+FileName+"'" )
-      if Platform == "VS": ExcludeFilesVS.append( FileName )
-      elif Platform == "QT": ExcludeFilesQt.append( FileName )
+      if Platform == "QT": ExcludeFilesQt.append( FileName )
       elif Platform == "MAKE": ExcludeFilesMake.append( FileName )
       elif Platform == "ANDROID": ExcludeFilesAndroid.append( FileName )
 
@@ -311,14 +298,7 @@ def LoadSourcesList( SourcesFileName ):
       SourcesList.append( str.strip( Line ) )
 
 def ParseCommandLine(argv, BatchBuild):
-   global OutputFileName
-   global VisualStudio2012
-   global VisualStudio2013
-   global VisualStudio2015
    global SourceDirs
-   global ConfigPath2012
-   global ConfigPath2013
-   global ConfigPath2015
    global IncludeDirs
    global ConfigPathMAKE
    global ConfigPathMAKETarget
@@ -338,7 +318,6 @@ def ParseCommandLine(argv, BatchBuild):
    global ModuleName
    global MainCPPName
    global DEFAULT_OBJ_DIR
-   global GenerateVCPROJ
    global GenerateMAKE
    global GenerateQT
    global GenerateCB
@@ -358,23 +337,7 @@ def ParseCommandLine(argv, BatchBuild):
       if OptionName == "-v" or OptionName == "--verbose": Verbose = True
       if OptionName == "--preserve-dirs": PreserveDirectoryStructure = True
       elif OptionName == "-s" or OptionName == "--source-dir": SourceDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -s" ) )
-      elif OptionName == "-o" or OptionName == "--output-file-MSVC": OutputFileName = CheckArgs( i+1, argv, "File name expected for option -o" )
-      elif OptionName == "-ver" or OptionName == "--MSVC-version":
-         GenerateVCPROJ = True
-         CompilerVer = CheckArgs( i+1, argv, "MSVC version expected for option -ver" )
-			# convert Compiler ver, if needed
-         if CompilerVer == "2012":
-            VisualStudio2012 = True
-         elif CompilerVer == "2013":
-            VisualStudio2013 = True
-         elif CompilerVer == "2015":
-            VisualStudio2015 = True
       elif OptionName == "-i" or OptionName == "--include-dir": IncludeDirs.append( CheckArgs( i+1, argv, "Directory name expected for option -i" ) )
-      elif OptionName == "-c" or OptionName == "--MSVC-config":
-         ConfigPath = CheckArgs( i+1, argv, "File name expected for option -c" )
-         ConfigPath2012 = ConfigPath + "X_2012";
-         ConfigPath2013 = ConfigPath + "X_2013";
-         ConfigPath2015 = ConfigPath + "X_2015";
       elif OptionName == "-m" or OptionName == "--makefile-config": ConfigPathMAKE = CheckArgs( i+1, argv, "File name expected for option -m" )
       elif OptionName == "-t" or OptionName == "--makefile-target": 
          ConfigPathMAKETarget = CheckArgs( i+1, argv, "File name expected for option -t" )
@@ -416,7 +379,6 @@ def ParseCommandLine(argv, BatchBuild):
 
    if len(SourceDirs) == 0: SourceDirs.append( "Src" )
    if not MainCPPName: MainCPPName = os.path.join( SourceDirs[0], ProjectName + ".cpp" )
-   if not OutputFileName: OutputFileName = ProjectName
    if not ConfigPathQtTarget: ConfigPathQtTarget = ProjectName + ".pro"
    if not ConfigPathCBTarget: ConfigPathCBTarget = ProjectName + ".cbp"
 
@@ -465,82 +427,7 @@ def GenerateAll():
       ObjectFiles.append( MakeObjectFile( SourceFile if PreserveDirectoryStructure else os.path.basename( SourceFile ) ) )
 
    if Verbose: print( "Reading make config from:", ConfigPathMAKE )
-   if VisualStudio2012:
-      if Verbose: print( "Reading MSVC 2012 config from:", ConfigPath2012 )
-   if VisualStudio2013:
-      if Verbose: print( "Reading MSVC 2013 config from:", ConfigPath2013 )
-   if VisualStudio2015:
-      if Verbose: print( "Reading MSVC 2015 config from:", ConfigPath2015 )
    if Verbose: print("")
-
-   if GenerateVCPROJ and (VisualStudio2012 or VisualStudio2013 or VisualStudio2015):
-      FileName = OutputFileName + ".vcxproj"
-      if Verbose: print( "Generating: ", FileName )
-      Out = open( FileName, 'wb' )
-      Out.write( codecs.BOM_UTF8 )
-      Out.close()
-      Out = open( FileName, 'a' )
-      # copy Configuration. template
-      if VisualStudio2012:
-         tmpl = open( ConfigPath2012 ).read()
-      elif VisualStudio2013:
-         tmpl = open( ConfigPath2013 ).read()
-      else:
-         tmpl = open( ConfigPath2015 ).read()
-      Out.write( ReplacePatterns( tmpl ) )
-
-      DontUseBuildDir = UnityBuildDirName.isspace()
-
-      # source files       
-      Out.write( MultiTab(1) + "<ItemGroup>\n" )
-      for File in SourceFiles:
-         Prefix = ("ClCompile") if ( DontUseBuildDir or (File.find(UnityBuildDirName) >= 0)) else "ClInclude"
-         Out.write( MultiTab(2) + "<"+Prefix+" Include= \"" + ReplacePathSep(File) + "\" />\n" )
-      Out.write( MultiTab(1) + "</ItemGroup>\n" )
-      # header files
-      Out.write( MultiTab(1) + "<ItemGroup>\n" )
-      for File in IncludeFiles: Out.write( MultiTab(2) + "<ClInclude Include= \"" + ReplacePathSep(File) + "\" />\n" )
-      Out.write( MultiTab(1) + "</ItemGroup>\n" )
-      # footer
-      Out.write( MultiTab(1) + "<Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\" />\n" )
-      Out.write( MultiTab(1) + "<ImportGroup Label=\"ExtensionTargets\">\n" )
-      Out.write( MultiTab(1) + "</ImportGroup>\n" )
-      Out.write( "</Project>\n" )
-      # filters
-      OutF = open( FileName + ".filters", 'wb' )
-      OutF.write( codecs.BOM_UTF8 )
-      OutF.close()
-      OutF = open( FileName + ".filters", 'a' )
-      OutF.write( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" )
-      OutF.write( "<Project ToolsVersion=\"4.0\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">\n" )
-      OutF.write( MultiTab(1) + "<ItemGroup>\n" )
-      for Dir in IncludeDirs:
-         if Dir.find("..") == 0: continue
-         OutF.write( MultiTab(2) + "<Filter Include=\"" + Dir + "\">\n" )
-         OutF.write( MultiTab(3) + "<UniqueIdentifier>{" + str(uuid.uuid4()) + "}</UniqueIdentifier>\n" )
-         OutF.write( MultiTab(2) + "</Filter>\n" )
-      OutF.write( MultiTab(1) + "</ItemGroup>\n" );
-
-      OutF.write( MultiTab(1) + "<ItemGroup>\n" )
-      for Index, File in enumerate(SourceFiles):
-         if File in ExcludeFilesVS: continue
-         Prefix = ("ClCompile") if ( DontUseBuildDir or (File.find(UnityBuildDirName) >= 0) ) else "ClInclude"
-         OutF.write( MultiTab(2) + "<"+Prefix+" Include=\"" + File + "\">\n" )
-         OutF.write( MultiTab(3) + "<Filter>" + SourceFilesDirs[Index] + "</Filter>\n" )
-         OutF.write( MultiTab(2) + "</"+Prefix+">\n" )
-      OutF.write( MultiTab(1) + "</ItemGroup>\n" )
-
-      OutF.write( MultiTab(1) + "<ItemGroup>\n" )
-      for Index, File in enumerate(IncludeFiles):
-         if File in ExcludeFilesVS: continue
-         OutF.write( MultiTab(2) + "<ClInclude Include=\"" + File + "\">\n" )
-         OutF.write( MultiTab(3) + "<Filter>" + IncludeFilesDirs[Index] + "</Filter>\n" )
-         OutF.write( MultiTab(2) + "</ClInclude>\n" )
-      OutF.write( MultiTab(1) + "</ItemGroup>\n" )
-
-      OutF.write( "</Project>" )
-      OutF.close()
-      Out.close()
 
    # generate GNU output
 

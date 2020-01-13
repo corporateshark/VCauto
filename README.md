@@ -1,9 +1,9 @@
 VCauto project generator
 ========================
 
-Copyright (C) 2005-2015 Sergey Kosarevsky (sk@linderdaum.com)
+Copyright (C) 2005-2020 Sergey Kosarevsky (sk@linderdaum.com)
 
-Copyright (C) 2005-2015 Viktor Latypov (vl@linderdaum.com)
+Copyright (C) 2005-2016 Viktor Latypov (vl@linderdaum.com)
 
 https://github.com/corporateshark/VCauto
 
@@ -15,15 +15,12 @@ support@linderdaum.com
 
 Generate project files from C/C++ source files for:
 
-* VisualStudio 2010
-* VisualStudio 2012
-* VisualStudio 2013
 * Qt Creator
 * Code::Blocks
 * Makefiles
-* Android NDK makefiles
+* Android NDK makefiles (up to NDK r21 Beta 2)
 
-Should run on any platform with Python 3+.
+Should run on any platform with Python 2/3+.
 
 =============================
 
@@ -31,8 +28,8 @@ License:
 --------
 
 ```
-Copyright (C) 2005-2015 Sergey Kosarevsky (sk@linderdaum.com)
-Copyright (C) 2005-2015 Viktor Latypov (vl@linderdaum.com)
+Copyright (C) 2005-2020 Sergey Kosarevsky (sk@linderdaum.com)
+Copyright (C) 2005-2016 Viktor Latypov (vl@linderdaum.com)
 Part of Linderdaum Engine http://www.linderdaum.com
 support@linderdaum.com
 All rights reserved.
