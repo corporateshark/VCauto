@@ -1,9 +1,9 @@
 #! /usr/bin/python
 #
 # VCproj generator
-# Version 0.7.04
-# Copyright (C) 2005-2016 Sergey Kosarevsky (sk@linderdaum.com)
-# Copyright (C) 2005-2015 Viktor Latypov (vl@linderdaum.com)
+# Version 0.7.05
+# Copyright (C) 2005-2020 Sergey Kosarevsky (sk@linderdaum.com)
+# Copyright (C) 2005-2016 Viktor Latypov (vl@linderdaum.com)
 # Part of Linderdaum Engine http://www.linderdaum.com
 # support@linderdaum.com
 # All rights reserved.
@@ -42,7 +42,7 @@ import uuid
 import codecs
 import platform
 
-VCAutoVersion = "0.7.04 (10/04/2016)"
+VCAutoVersion = "0.7.05 (13/01/2020)"
 
 Verbose = False
 
@@ -237,8 +237,8 @@ def ReplacePathSepUNIX(File):
 def ShowLogo():
    print("")
    print( "VCauto autobuilder. Version", VCAutoVersion )
-   print( "(C) Sergey Kosarevsky, 2005-2015." )
-   print( "(C) Viktor Latypov, 2005-2015. " )
+   print( "(C) Sergey Kosarevsky, 2005-2020." )
+   print( "(C) Viktor Latypov, 2005-2016. " )
    print( "http://www.linderdaum.com" )
    print( "support@linderdaum.com" )
    print("")
@@ -288,6 +288,7 @@ def LoadPlatformsExcludes( ExcludesFileName ):
    for Line in open( ExcludesFileName ).readlines():
       Platform = str.strip( Line[ :Line.find(':'): ] )
       FileName = ReplacePathSep( str.strip( Line[  Line.find(':')+1:: ] ) )
+      FileName = ReplacePathSepUNIX( FileName )
       print( "'"+Platform+"'   '"+FileName+"'" )
       if Platform == "VS": ExcludeFilesVS.append( FileName )
       elif Platform == "QT": ExcludeFilesQt.append( FileName )
@@ -698,7 +699,7 @@ def GenerateAll():
          Out.write( "LOCAL_SRC_FILES += \\\n" )
 
          for Name in SourceFiles:
-            if Name in ExcludeFilesAndroid: 
+            if ReplacePathSepUNIX(Name) in ExcludeFilesAndroid: 
                if Verbose: print( "   Android excluded:", Name )
                continue
             Out.write( MultiTab(1) + AndroidPathPrefix + ReplacePathSepUNIX(Name) + " \\\n" );
