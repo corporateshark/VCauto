@@ -1,8 +1,8 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 #
 # VCproj generator
-# Version 0.7.10
-# Copyright (C) 2005-2020 Sergey Kosarevsky (sk@linderdaum.com)
+# Version 0.7.11
+# Copyright (C) 2005-2023 Sergey Kosarevsky (sk@linderdaum.com)
 # Copyright (C) 2005-2016 Viktor Latypov (vl@linderdaum.com)
 # Part of Linderdaum Engine http://www.linderdaum.com
 # support@linderdaum.com
